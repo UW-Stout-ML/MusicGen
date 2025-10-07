@@ -3,6 +3,7 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
+# Pizza Approved
 class MusicEncoder(nn.Module):
   def __init__(self, vocab_size, input_size, hidden_size, num_layers):
     super().__init__()
@@ -20,16 +21,29 @@ class MusicEncoder(nn.Module):
 class MusicDecoder(nn.Module):
   def __init__(self, vocab_size, input_size, hidden_size, num_layers, sos_tok, eos_tok):
     super().__init__()
+    
     self.sos_tok = sos_tok
     self.eos_tok = eos_tok
-    self.proj_h = nn.Linear(2 * hidden_size, hidden_size)
-    self.proj_o = nn.Linear(2 * hidden_size, hidden_size)
-    self.combine_ctx = nn.Linear(3 * hidden_size, hidden_size)
-    self.hidden2vocab = nn.Linear(hidden_size, vocab_size)
-    self.embed = nn.Embedding(vocab_size, input_size)
-    self.gru = nn.GRU(input_size, hidden_size, num_layers, batch_first=True)
     self.num_layers = num_layers
     self.hidden_size = hidden_size
+
+    # Project output from encoder to match decoder input size
+    self.proj_h = nn.Linear(2 * hidden_size, hidden_size)
+    self.proj_o = nn.Linear(2 * hidden_size, hidden_size)
+    
+    # Combine context vector with output from decoder
+    # A context vector is derived from taking the dot product
+    # of the output of the encoder with the output of the decoder
+    self.combine_ctx = nn.Linear(3 * hidden_size, hidden_size)
+
+    # Map input dimension to the size of the input for the encoder
+    self.embed = nn.Embedding(vocab_size, input_size)
+
+    # The size of the output from the decoder is mapped to the vocab size
+    self.hidden2vocab = nn.Linear(hidden_size, vocab_size)
+
+    # A GRU is a type of RNN with gates that help the model learn complex patterns
+    self.gru = nn.GRU(input_size, hidden_size, num_layers, batch_first=True)
 
   def forward(self, enc_out, enc_hn, targets, forcing=0.5):
     device = targets.device
@@ -50,7 +64,7 @@ class MusicDecoder(nn.Module):
       dec_output, dec_hn = self.gru(emb, dec_hn)
       # dec_hn = dec_hn.detach()
       # output: (batch_size, hidden_size)
-      dec_output = dec_output.squeeze()
+      dec_output = dec_output.squeeze(1)
       similarity_scores = torch.bmm(proj_enc_out, dec_output[..., None]) # (batch_size, seq_len, 1)
       similarity_scores = similarity_scores.squeeze(2) # (batch_size, seq_len)
       similarity_scores = F.softmax(similarity_scores, dim=1)
