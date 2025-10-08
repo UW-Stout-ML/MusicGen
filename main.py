@@ -2,11 +2,6 @@ from Song_corpus_generator import *
 
 
 data_folder = 'MusicRNN\\cleaned_midi'
-<<<<<<< Updated upstream
-max_songs = 10000
-a, b = get_dictionaries(data_folder, max_songs)
-# print(a, b)
-=======
 max_songs = float('inf')
 
 # files = get_valid_midi_file_paths(data_folder)
@@ -19,4 +14,3 @@ max_songs = float('inf')
 # compare_midis(p, s)
 
 a, b = get_dictionaries(data_folder, max_songs=max_songs)
->>>>>>> Stashed changes
