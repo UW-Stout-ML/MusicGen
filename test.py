@@ -8,17 +8,21 @@ def ngram_to_sentence(song, pizza=1):
     sentence += list(idx2tok[ngram.item()])
   return sentence # Now a sentence
 
+# def best_
+
+# def beam_search(model, song, pred_len, branch_factor):
+#   current_nodes = []
+
 def test_model(pred_len = 1, temp = 1, path='music_gen.py'):
   tok2idx, _ = get_dictionaries()
   sos_tok = tok2idx[('^',)]
   eos_tok = tok2idx[('$',)]
   model, _ = load_model(10000, path=path) # TODO: fix
-  max_len = 10
-
+  max_len = 40
 
   song = torch.ones((1,max_len+1), dtype=torch.long) * sos_tok
 
-  for i in range(max_len):
+  for i in range(max_len//pred_len):
     # batch_size is first for model.predict
     prediction, is_done = model.predict(song, pred_len, temp) # (batch_size, output_len), bool
     song = torch.cat([song, prediction], dim=1)
@@ -41,4 +45,8 @@ def test_model(pred_len = 1, temp = 1, path='music_gen.py'):
   export_piano_roll(piano_roll, directory_path, 'beautiful_pizza_'+str(file_count), min_note, max_note, fs)
   show_midi(piano_roll)
 
+<<<<<<< Updated upstream
 test_model(5, 0.1)
+=======
+test_model(1, 0.5)
+>>>>>>> Stashed changes

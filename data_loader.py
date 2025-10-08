@@ -4,6 +4,7 @@ from Song_corpus_generator import *
 from torch.nn.utils.rnn import pack_sequence, pad_sequence
 from torch.utils.data import Dataset, DataLoader
 
+<<<<<<< Updated upstream
 tok2idx, idx2tok = get_dictionaries()
 
 def collate_fn(batch: list[torch.tensor]):
@@ -20,6 +21,52 @@ class Corpus(Dataset):
     self.midi_paths = []
     corpus_list = get_cleaned_corpus(fileloc, vocab_size, max_songs)[0]
     self.corpus = [torch.tensor(l) for l in corpus_list]
+=======
+def get_collate_fn(target_len):
+  def collate_fn(batch: list[torch.tensor]):
+    # enforce_sorted should be False if the dataset is not sorted
+    # it will be sorted if it is set to False, but will be slower
+    # return pack_sequence(batch, enforce_sorted=False)
+    # eos_tok = tok2idx[('$',)]
+    # Find the biggest song and fill the rest with the eos token
+    # return pad_sequence(batch, batch_first=True, padding_value=eos_tok)
+    
+    min_len = min([t.shape[0] for t in batch])
+    batch = [t[:min_len] for t in batch]
+    batch = torch.stack(batch, dim=0)
+
+    # Random pizzas
+    full_song_len = min_len
+    song_len = random.randint(target_len + 1, full_song_len)  
+    
+    return (
+      batch[:,:song_len-target_len],
+      batch[:,song_len-target_len:song_len]
+    )
+
+  return collate_fn
+
+class Corpus(Dataset):
+  def __init__(
+    self,
+    fileloc,
+    vocab_size=10000,
+    max_songs=float('inf'),
+    min_song_len=10,
+    rand=False,
+    target_len=2,
+    cap=256
+  ):
+    self.midi_paths = []
+    self.target_len=target_len
+    self.rand = rand
+    self.cap = cap
+    max_corp_songs = 1000 # Delete joblibs before changing this
+    corpus_list = get_cleaned_corpus(fileloc, vocab_size, max_corp_songs, min_song_len)[0]
+    self.corpus = [torch.tensor(l) for l in corpus_list]
+    if max_songs is not None:
+      self.corpus = self.corpus[:max_songs]
+>>>>>>> Stashed changes
 
   def __len__(self):
     return len(self.corpus)

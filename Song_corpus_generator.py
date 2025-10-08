@@ -70,7 +70,7 @@ def tokenize_songs(songs, token2idx):
     return tokenized_songs
 
 
-def process_corpus(songs_list, vocab_size):
+def process_corpus(songs_list, vocab_size, min_song_len):
     """
     Build the cleaned corpus from scratch:
 
@@ -89,6 +89,9 @@ def process_corpus(songs_list, vocab_size):
     tokens = tokenize_songs(songs_list, token2idx)
     # tokens_arr = np.array(tokens)
 
+    # Make sure the songs are at least min_song_len events long
+    tokens = list(filter(lambda x: len(x) >= min_song_len, tokens))
+
     # Save everything
     print("Saving corpus and dictionaries...")
     with open("corpus_tokenized.joblib", 'wb') as f:
@@ -101,7 +104,7 @@ def process_corpus(songs_list, vocab_size):
     return tokens, token2idx, idx2token
 
 
-def get_cleaned_corpus(data_folder, vocab_size, max_songs=float('inf')) -> tuple[list[list[int]],dict,dict]:
+def get_cleaned_corpus(data_folder, vocab_size, max_songs=float('inf'), min_song_len=1) -> tuple[list[list[int]],dict,dict]:
     """
     Load processed corpus from disk if available, otherwise generate it.
     """
@@ -114,12 +117,15 @@ def get_cleaned_corpus(data_folder, vocab_size, max_songs=float('inf')) -> tuple
             idx2token = {int(idx): token for idx, token in joblib.load(f).items()}
         return corpus, token2idx, idx2token
 
+    if not data_folder:
+        print("Missing data folder!")
+        exit(2)
     print('Getting data...')
     songs_list = get_data(data_folder, max_songs)
     print('nsongs', len(songs_list))
 
     print('Processing corpus...')
-    return process_corpus(songs_list, vocab_size)
+    return process_corpus(songs_list, vocab_size, min_song_len)
 
 
 def get_dictionaries(data_folder='', vocab_size=10000, max_songs=float('inf')) -> tuple[dict, dict]:
