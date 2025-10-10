@@ -52,17 +52,18 @@ def train(
   epochs=10000,
   batch_size=32,
   lr=0.001,
-  forcing=0.5,
+  forcing=0.3,
   vocab_size=10000,
   target_len=20,
   model_path='music_gen.pt',
   save_freq=2,
-  data_path='midis',
+  data_path='maestro-v3.0.0',
   max_songs=None,
-  min_song_len=30
+  min_song_len=30,
+  cap=None
 ):
   device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-  dataset = Corpus(data_path, vocab_size, max_songs=max_songs, min_song_len=min_song_len, rand=True, target_len=target_len, cap=256)
+  dataset = Corpus(data_path, vocab_size, max_songs=max_songs, min_song_len=min_song_len, rand=True, target_len=target_len, cap=cap)
   
   if len(dataset) == 0:
     print("Error: The dataset is empty!")

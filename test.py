@@ -45,4 +45,4 @@ def test_model(pred_len = 1, temp = 1, path='music_gen.py'):
   export_piano_roll(piano_roll, directory_path, 'song_'+str(file_count), min_note, max_note, fs)
   show_midi(piano_roll)
 
-test_model(1, 0.5)
+test_model(20, 0.5)

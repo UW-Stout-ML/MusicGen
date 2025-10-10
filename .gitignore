@@ -1,4 +1,6 @@
 .vscode/
 .venv/
 midis/
+songs/
+maestro-v3.0.0/
 __pycache__/

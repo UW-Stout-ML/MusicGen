@@ -1,9 +1,9 @@
-import random
 import torch
 import numpy as np
 from Song_corpus_generator import *
 from torch.nn.utils.rnn import pack_sequence, pad_sequence
 from torch.utils.data import Dataset, DataLoader
+import random
 
 def get_collate_fn(target_len):
   def collate_fn(batch: list[torch.tensor]):
@@ -46,6 +46,8 @@ class Corpus(Dataset):
     self.cap = cap
     max_corp_songs = 1000 # Delete joblibs before changing this
     corpus_list = get_cleaned_corpus(fileloc, vocab_size, max_corp_songs, min_song_len)[0]
+    
+    # This is our dataset of encoded sentences
     self.corpus = [torch.tensor(l) for l in corpus_list]
     if max_songs is not None:
       self.corpus = self.corpus[:max_songs]
@@ -54,4 +56,12 @@ class Corpus(Dataset):
     return len(self.corpus)
   
   def __getitem__(self, idx):
-    return self.corpus[idx]
+    # Cap the number of n-grams in a song
+    song = self.corpus[idx]
+    song = song[:self.cap]
+    if (self.rand):
+      full_song_len = song.shape[0]
+      # print(full_song_len, self.target_len, song)
+      song_len = random.randint(self.target_len + 1, full_song_len)  
+      return song[:song_len]
+    return song
