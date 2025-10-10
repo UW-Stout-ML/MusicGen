@@ -57,7 +57,7 @@ def train(
   target_len=20,
   model_path='music_gen.pt',
   save_freq=2,
-  data_path='MusicRNN\\cleaned_midi',
+  data_path='midis',
   max_songs=None,
   min_song_len=30
 ):
@@ -105,6 +105,6 @@ def train(
     if (epoch + 1) % save_freq == 0:
       print(f"Saving model... avg loss={(total_loss/total_tok):0.4f}")
       save_model(model, epoch, model_path)
-  
+
 if __name__ == '__main__':
   train()

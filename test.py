@@ -1,6 +1,6 @@
 from train import *
 
-def ngram_to_sentence(song, pizza=1):
+def ngram_to_sentence(song):
   """Convert a sequence with ngrams to a sentence"""
   _, idx2tok = get_dictionaries()
   sentence = []
@@ -39,10 +39,10 @@ def test_model(pred_len = 1, temp = 1, path='music_gen.py'):
   piano_roll = sentence_to_piano_roll(sentence, min_note, max_note)
   # print(piano_roll)
 
-  directory_path = 'pizzas'
+  directory_path = 'songs'
   file_count = len([entry for entry in os.listdir(directory_path) if os.path.isfile(os.path.join(directory_path, entry))])
 
-  export_piano_roll(piano_roll, directory_path, 'beautiful_pizza_'+str(file_count), min_note, max_note, fs)
+  export_piano_roll(piano_roll, directory_path, 'song_'+str(file_count), min_note, max_note, fs)
   show_midi(piano_roll)
 
 test_model(1, 0.5)
