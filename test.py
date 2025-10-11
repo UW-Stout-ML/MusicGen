@@ -17,7 +17,7 @@ def ngram_to_sentence(song):
     sentence += list(idx2tok[ngram.item()])
   return sentence # Now a sentence
 
-def test_model(max_len = 1, temp = 1, path='music_gen.py'):
+def test_model(max_len = 1, temp = 1, path='music_gen.pt'):
   tok2idx, _ = get_dictionaries()
   sos_tok = tok2idx[('^',)]
   eos_tok = tok2idx[('$',)]
@@ -38,7 +38,7 @@ def test_model(max_len = 1, temp = 1, path='music_gen.py'):
     #   # if is_done: break
 
   song = song[0] # Get first batch
-  print(song)
+  # print(song)
   # DECODE
   min_note = 1*12
   max_note = 8*12
@@ -55,4 +55,4 @@ def test_model(max_len = 1, temp = 1, path='music_gen.py'):
   show_midi(piano_roll)
 
 
-test_model(40, 0)
+test_model(100, 0.0)

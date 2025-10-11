@@ -86,7 +86,7 @@ class MusicGen(nn.Module):
 
     logit_list = [logits]
     for seq_idx in range(1, target_length):
-      print(input)
+      # print(input)
       emb = self.embed(input) # (batch_size, 1, input_size)
       # output: (batch_size, 1, hidden_size)
       # hn: (num_layers, batch_size, hidden_size)
@@ -106,6 +106,8 @@ class MusicGen(nn.Module):
     # hn: (num_layers, batch_size, hidden_size)
     outputs, hn = self.gru(emb)
     logits = self.attention(outputs) # logits: (batch_size, vocab_size)
+    torch.set_printoptions(threshold=float('inf'))
+    # print(logits[0, :100])
     input = self.temperature(logits, temp) # (batch_size, 1)
     new_toks = [input.squeeze(1)]
     for seq_idx in range(1, max_len): # TODO stop if end of seq char

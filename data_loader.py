@@ -21,7 +21,7 @@ def get_collate_fn(target_len):
     # Random pizzas
     full_song_len = min_len
     # song_len = random.randint(target_len + 1, full_song_len)  
-    song_len = 40
+    song_len = 50
 
     return (
       batch[:,:song_len-target_len],

@@ -53,11 +53,11 @@ def load_model(
 
 def train(
   epochs=10000,
-  batch_size=1,
+  batch_size=64,
   lr=0.0001,
-  forcing=0.0,
+  forcing=0.5,
   vocab_size=10000,
-  target_len=39,
+  target_len=49,
   model_path='music_gen.pt',
   save_freq=10,
   data_path=data_dir,
@@ -90,13 +90,15 @@ def train(
       target = x[1]
       input = input.to(device)
       target = target.to(device)
-      print(input, target)
+      # print(input, target)
 
       # print(input, target)
 
       if hasattr(model, 'reset_states'):
         model.reset_states()
       logits = model(input, target, forcing) # (batch_size, target_length, vocab_size)
+      torch.set_printoptions(threshold=float('inf'))
+      # print(logits[0, 0, :100])
       # CrossEntropyLoss applies softmax
       loss = loss_fn(logits.reshape(-1, vocab_size), target.reshape(-1)) # (1,)
       total_loss += loss.item() * target.numel()
