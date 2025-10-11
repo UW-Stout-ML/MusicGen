@@ -23,31 +23,33 @@ def get_collate_fn(target_len):
     # song_len = random.randint(target_len + 1, full_song_len)  
     song_len = 40
 
-    return (
+    output = (
       batch[:,:song_len-target_len],
       batch[:,song_len-target_len:song_len]
     )
+
+    # print('collate', song_len, target_len, min_len)
+
+    return output
 
   return collate_fn
 
 class Corpus(Dataset):
   def __init__(
     self,
-    fileloc,
-    vocab_size=10000,
+    data_path,
+    input_len,
+    target_len,
+    max_corp_songs=float('inf'),
     max_songs=float('inf'),
-    min_song_len=10,
-    rand=False,
-    target_len=2,
-    cap=256
+    max_vocab_size=float('inf'),
   ):
-    self.midi_paths = []
-    self.target_len=target_len
-    self.rand = rand
-    self.cap = cap
-    max_corp_songs = 1000 # Delete joblibs before changing this
-    corpus_list = get_cleaned_corpus(fileloc, vocab_size, max_corp_songs, min_song_len)[0]
-    
+    self.input_len = input_len
+    self.target_len = target_len
+    self.min_song_len = input_len + target_len + 1
+    corpus_list, tok2idx, _ = get_cleaned_corpus(data_path, max_vocab_size, max_corp_songs, self.min_song_len)
+    self.vocab_size = len(tok2idx)
+
     # This is our dataset of encoded sentences
     self.corpus = [torch.tensor(l) for l in corpus_list]
     if max_songs is not None:
@@ -57,12 +59,10 @@ class Corpus(Dataset):
     return len(self.corpus)
   
   def __getitem__(self, idx):
-    # Cap the number of n-grams in a song
     song = self.corpus[idx]
-    song = song[:self.cap]
-    if (self.rand):
-      full_song_len = song.shape[0]
-      # print(full_song_len, self.target_len, song)
-      song_len = random.randint(self.target_len + 1, full_song_len)  
-      return song[:song_len]
-    return song
+    start_idx = random.randint(0, song.shape[0] - self.min_song_len - 1)
+    mid_idx = start_idx + self.input_len
+    end_idx = mid_idx + self.target_len
+    input = song[start_idx:mid_idx]
+    target = song[mid_idx:end_idx]
+    return input, target

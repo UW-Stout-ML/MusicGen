@@ -11,6 +11,7 @@ class MusicGen(nn.Module):
     self.eos_tok = eos_tok
     self.num_layers = num_layers
     self.hidden_size = hidden_size
+    self.vocab_size = vocab_size
     
     # Combine context vector with output from decoder
     # A context vector is derived from taking the dot product
@@ -86,7 +87,6 @@ class MusicGen(nn.Module):
 
     logit_list = [logits]
     for seq_idx in range(1, target_length):
-      print(input)
       emb = self.embed(input) # (batch_size, 1, input_size)
       # output: (batch_size, 1, hidden_size)
       # hn: (num_layers, batch_size, hidden_size)

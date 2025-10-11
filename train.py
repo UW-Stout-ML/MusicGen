@@ -3,7 +3,7 @@ from data_loader import *
 from pathlib import Path
 
 cwd = Path(__file__).parent
-data_dir = cwd / 'maestro-v3.0.0'
+data_dir = cwd / 'midis'
 
 def save_model(model: MusicGen, epochs, path='music_gen.pt'):
   """Save the MusicGen model
@@ -18,14 +18,14 @@ def save_model(model: MusicGen, epochs, path='music_gen.pt'):
   """
   torch.save({
     'model': model.state_dict(),
-    'epochs': epochs
+    'epochs': epochs,
+    'vocab_size': model.vocab_size
   }, path)
 
 def load_model(
-  vocab_size,
-  input_size=64,
-  hidden_size=512,
-  num_layers=3,
+  input_size=32,
+  hidden_size=256,
+  num_layers=2,
   path='music_gen.pt'
 ) -> tuple[MusicGen, int]:
   """Load the MusicGen model
@@ -42,6 +42,7 @@ def load_model(
   tok2idx, _ = get_dictionaries()
   sos_tok = tok2idx[('^',)]
   eos_tok = tok2idx[('$',)]
+  vocab_size = len(tok2idx)
   model = MusicGen(vocab_size, input_size, hidden_size, num_layers, sos_tok, eos_tok)
   
   try:
@@ -49,33 +50,48 @@ def load_model(
     model.load_state_dict(dic['model'])
     return model, dic['epochs']
   except: # No model file found
+    print("Model not found, creating a new one...")
     return model, 0
 
 def train(
+  # Training parameters
   epochs=10000,
-  batch_size=1,
+  batch_size=16,
   lr=0.0001,
   forcing=0.0,
-  vocab_size=10000,
-  target_len=39,
-  model_path='music_gen.pt',
-  save_freq=10,
+  input_len=40,
+  target_len=10,
+  save_freq=1,
+
+  # Dataset parameters
+  max_vocab_size=10000,
   data_path=data_dir,
-  max_songs=1,
-  min_song_len=30,
-  cap=None
+  max_songs=10000,
+  max_corp_songs=100,
+  model_path='music_gen.pt',
 ):
-  device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-  dataset = Corpus(data_path, vocab_size, max_songs=max_songs, min_song_len=min_song_len, rand=True, target_len=target_len, cap=cap)
+  device=torch.device("cuda" if torch.cuda.is_available() else "cpu")
+  dataset = Corpus(
+    data_path,
+    input_len,
+    target_len,
+    max_corp_songs,
+    max_songs,
+    max_vocab_size
+  )
   
+  vocab_size = dataset.vocab_size
+
+  print(f"Vocab size: {vocab_size}")
+
   if len(dataset) == 0:
     print("Error: The dataset is empty!")
     exit(1)
 
-  loader = DataLoader(dataset, batch_size, True, collate_fn=get_collate_fn(target_len))
+  loader = DataLoader(dataset, batch_size, True)
 
   # Load the model
-  model, epoch = load_model(vocab_size, path=model_path)
+  model, epoch = load_model(path=model_path)
   model = model.to(device)
   loss_fn = nn.CrossEntropyLoss()
   optim = torch.optim.Adam(model.parameters(), lr=lr)
@@ -83,19 +99,15 @@ def train(
   for epoch in tqdm(range(epoch, epochs), 'Training...'):
     total_loss = 0
     total_tok = 0
-    # progress_bar = tqdm(loader, desc=f"Epoch {epoch + 1}/{epochs}", position=0, nrows=2, leave=False)
-    # for batch_idx, x in enumerate(progress_bar):
     for x in loader:
       input = x[0]
       target = x[1]
       input = input.to(device)
       target = target.to(device)
-      print(input, target)
-
-      # print(input, target)
 
       if hasattr(model, 'reset_states'):
         model.reset_states()
+      
       logits = model(input, target, forcing) # (batch_size, target_length, vocab_size)
       # CrossEntropyLoss applies softmax
       loss = loss_fn(logits.reshape(-1, vocab_size), target.reshape(-1)) # (1,)

@@ -17,25 +17,25 @@ def ngram_to_sentence(song):
     sentence += list(idx2tok[ngram.item()])
   return sentence # Now a sentence
 
-def test_model(max_len = 1, temp = 1, path='music_gen.py'):
+def test_model(max_len=50, temp=0.3, path='music_gen.pt'):
   tok2idx, _ = get_dictionaries()
   sos_tok = tok2idx[('^',)]
   eos_tok = tok2idx[('$',)]
-  model, _ = load_model(10000, path=path) # TODO: fix
-  # max_len = 40
+  model, _ = load_model(path=path) # TODO: fix
 
   song = torch.ones((1, 1), dtype=torch.long) * sos_tok
 
   with torch.no_grad():
     prediction = model.predict(song, max_len, temp)
   song = torch.cat([song, prediction], dim=1)
-    # for i in range(max_len):
-    #   # batch_size is first for model.predict
-    #   # prediction, is_done = model.predict(song, pred_len, temp) # (batch_size, output_len), bool
-    #   prediction = model.predict(song, pred_len, temp) # (batch_size, output_len)
-    #   # print(song.shape, prediction.shape)
-    #   song = torch.cat([song, prediction], dim=1)
-    #   # if is_done: break
+  
+  # for i in range(max_len):
+  #   # batch_size is first for model.predict
+  #   # prediction, is_done = model.predict(song, pred_len, temp) # (batch_size, output_len), bool
+  #   prediction = model.predict(song, pred_len, temp) # (batch_size, output_len)
+  #   # print(song.shape, prediction.shape)
+  #   song = torch.cat([song, prediction], dim=1)
+  #   # if is_done: break
 
   song = song[0] # Get first batch
   print(song)
@@ -54,5 +54,4 @@ def test_model(max_len = 1, temp = 1, path='music_gen.py'):
   export_piano_roll(piano_roll, directory_path, 'song_'+str(file_count), min_note, max_note, fs)
   show_midi(piano_roll)
 
-
-test_model(40, 0)
+test_model()
