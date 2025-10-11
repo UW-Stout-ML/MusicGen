@@ -3,22 +3,21 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
-# Pizza Approved
+# class MusicEncoder(nn.Module):
+#   def __init__(self, vocab_size, input_size, hidden_size, num_layers):
+#     super().__init__()
+#     self.embed = nn.Embedding(vocab_size, input_size)
+#     self.gru = nn.GRU(input_size, hidden_size, num_layers, bidirectional=True, batch_first=True, dropout=0.2)
+
+#   def forward(self, x):
+#     # input: (batch_size, 1)
+#     # output: (batch_size, seq_len, 2 * hidden_size)
+#     # hn: (2 * num_layers, batch_size, hidden_size)
+#     input = self.embed(x)
+#     output, hn = self.gru(input)
+#     return output, hn
+
 class MusicEncoder(nn.Module):
-  def __init__(self, vocab_size, input_size, hidden_size, num_layers):
-    super().__init__()
-    self.embed = nn.Embedding(vocab_size, input_size)
-    self.gru = nn.GRU(input_size, hidden_size, num_layers, bidirectional=True, batch_first=True, dropout=0.2)
-
-  def forward(self, x):
-    # input: (batch_size, 1)
-    # output: (batch_size, seq_len, 2 * hidden_size)
-    # hn: (2 * num_layers, batch_size, hidden_size)
-    input = self.embed(x)
-    output, hn = self.gru(input)
-    return output, hn
-
-class MusicDecoder(nn.Module):
   def __init__(self, vocab_size, input_size, hidden_size, num_layers, sos_tok, eos_tok):
     super().__init__()
     
@@ -28,8 +27,8 @@ class MusicDecoder(nn.Module):
     self.hidden_size = hidden_size
 
     # Project output from encoder to match decoder input size
-    self.proj_h = nn.Linear(2 * hidden_size, hidden_size)
-    self.proj_o = nn.Linear(2 * hidden_size, hidden_size)
+    # self.proj_h = nn.Linear(2 * hidden_size, hidden_size)
+    # self.proj_o = nn.Linear(2 * hidden_size, hidden_size)
     
     # Combine context vector with output from decoder
     # A context vector is derived from taking the dot product
@@ -45,43 +44,69 @@ class MusicDecoder(nn.Module):
     # A GRU is a type of RNN with gates that help the model learn complex patterns
     self.gru = nn.GRU(input_size, hidden_size, num_layers, batch_first=True, dropout=0.2)
 
-  def forward(self, enc_out, enc_hn, dec_inp, targets, forcing=0.5):
-    device = targets.device
-    batch_size, target_length = targets.shape
-    # dec_inp = torch.full((batch_size, 1), self.sos_tok, dtype=torch.long, device=device)
-    enc_hn = enc_hn.view(self.num_layers, 2, batch_size, self.hidden_size)
-    dec_h_neg_1 = torch.cat((enc_hn[:, 0, ...], enc_hn[:, 1, ...]), dim=2) # (num_layers, batch_size, 2 * hidden_size) 
-    proj_h_neg_1 = self.proj_h(dec_h_neg_1) # (num_layers, batch_size, hidden_size)
+  def forward(self, current_notes, true_note, forcing_rate=0.5):
+    # 1) get last few notes
+    # 2) embed last few notes
+    # 3) input last hn and attention into gru
+    # 4) get new hn
+    # 5) repeat
 
-    # Attention!
-    proj_enc_out = self.proj_o(enc_out) # (batch_size, seq_len, hidden_size)
-    outputs = []
-    dec_hn = proj_h_neg_1
-    for seq_idx in range(target_length):
-      emb = self.embed(dec_inp) # (batch_size, input_size)
-      # output: (batch_size, 1, hidden_size)
-      # dec_hn: (num_layers, batch_size, hidden_size)
-      dec_output, dec_hn = self.gru(emb, dec_hn)
-      # dec_hn = dec_hn.detach()
-      # output: (batch_size, hidden_size)
-      dec_output = dec_output.squeeze(1)
-      similarity_scores = torch.bmm(proj_enc_out, dec_output[..., None]) # (batch_size, seq_len, 1)
-      similarity_scores = similarity_scores.squeeze(2) # (batch_size, seq_len)
-      similarity_scores = F.softmax(similarity_scores, dim=1)
-      co = torch.bmm(similarity_scores[:, None, :], enc_out) # (batch_size, 1, 2 * hidden_size)
-      co = co.squeeze(1) # (batch_size, 2 * hidden_size)
-      combined = torch.cat((dec_output, co), dim=1) # (batch_size, 3 * hidden_size)
-      combined = self.combine_ctx(combined)
-      combined = torch.tanh(combined)
-      logits = self.hidden2vocab(combined) # (batch_size, vocab_size)
-      outputs += [logits]
-      if random.random() < forcing:
-        dec_inp = targets[:, seq_idx]
-        dec_inp = dec_inp[:, None] # (batch_size, 1)
-      else:
-        dec_inp = torch.argmax(logits, dim=1, keepdim=True) # (batch_size, 1)
+    """pseudo code
+    output, hn = gru(current_notes)
+    similarity = dot(output[:-1], output[-1])
+    next_note = teacher_forcing(output[-1], true_note, forcing_rate)
+    current_notes += next_note
+    """
 
-    return torch.stack(outputs, dim=1) # (batch_size, target_length, vocab_size)
+    # current_notes: (batch_size, vocab_size)
+
+    emb_current_notes = self.embed(current_notes)
+    # emb_current_notes: (batch_size, input_size)
+    
+    output, hn = self.gru(emb_current_notes)
+    # output: (batch_size, seq_len, hidden_size)
+    # hn: (num_layers, batch_size, hidden_size)
+    
+    similarity_scores = torch.bmm(output[:, -1], output[:, :-1, None]) # (batch_size, seq_len, 1)
+    similarity_scores = similarity_scores.squeeze(2) # (batch_size, seq_len)
+    similarity_scores = F.softmax(similarity_scores, dim=1)
+
+    # device = targets.device
+    # batch_size, target_length = targets.shape
+    # # dec_inp = torch.full((batch_size, 1), self.sos_tok, dtype=torch.long, device=device)
+    # enc_hn = enc_hn.view(self.num_layers, 2, batch_size, self.hidden_size)
+    # dec_h_neg_1 = torch.cat((enc_hn[:, 0, ...], enc_hn[:, 1, ...]), dim=2) # (num_layers, batch_size, 2 * hidden_size) 
+    # proj_h_neg_1 = self.proj_h(dec_h_neg_1) # (num_layers, batch_size, hidden_size)
+
+    # # Attention!
+    # proj_enc_out = self.proj_o(enc_out) # (batch_size, seq_len, hidden_size)
+    # outputs = []
+    # dec_hn = proj_h_neg_1
+    # for seq_idx in range(target_length):
+    #   emb = self.embed(dec_inp) # (batch_size, input_size)
+    #   # output: (batch_size, 1, hidden_size)
+    #   # dec_hn: (num_layers, batch_size, hidden_size)
+    #   dec_output, dec_hn = self.gru(emb, dec_hn)
+    #   # dec_hn = dec_hn.detach()
+    #   # output: (batch_size, hidden_size)
+    #   dec_output = dec_output.squeeze(1)
+    #   similarity_scores = torch.bmm(proj_enc_out, dec_output[..., None]) # (batch_size, seq_len, 1)
+    #   similarity_scores = similarity_scores.squeeze(2) # (batch_size, seq_len)
+    #   similarity_scores = F.softmax(similarity_scores, dim=1)
+    #   co = torch.bmm(similarity_scores[:, None, :], enc_out) # (batch_size, 1, 2 * hidden_size)
+    #   co = co.squeeze(1) # (batch_size, 2 * hidden_size)
+    #   combined = torch.cat((dec_output, co), dim=1) # (batch_size, 3 * hidden_size)
+    #   combined = self.combine_ctx(combined)
+    #   combined = torch.tanh(combined)
+    #   logits = self.hidden2vocab(combined) # (batch_size, vocab_size)
+    #   outputs += [logits]
+    #   if random.random() < forcing:
+    #     dec_inp = targets[:, seq_idx]
+    #     dec_inp = dec_inp[:, None] # (batch_size, 1)
+    #   else:
+    #     dec_inp = torch.argmax(logits, dim=1, keepdim=True) # (batch_size, 1)
+
+    # return torch.stack(outputs, dim=1) # (batch_size, target_length, vocab_size)
   
   def inference(self, enc_out, enc_hn, dec_inp, max_len, temp):
     device = enc_out.device
@@ -136,12 +161,13 @@ class Seq2Seq(nn.Module):
   def __init__(self, vocab_size, enc_input_size, dec_input_size, hidden_size, num_layers, sos_tok, eos_tok):
     super().__init__()
     self.enc = MusicEncoder(vocab_size, enc_input_size, hidden_size, num_layers)
-    self.dec = MusicDecoder(vocab_size, dec_input_size, hidden_size, num_layers, sos_tok, eos_tok)
+    # self.dec = MusicDecoder(vocab_size, dec_input_size, hidden_size, num_layers, sos_tok, eos_tok)
 
   def forward(self, input, targets, forcing):
     enc_out, enc_hn = self.enc(input)
     dec_inp = input[:,-1][:, None]
-    return self.dec(enc_out, enc_hn, dec_inp, targets, forcing)
+    return dec_inp
+    # return self.dec(enc_out, enc_hn, dec_inp, targets, forcing)
 
   def predict(self, input_tensor, max_len, temp):
     self.eval()
@@ -149,4 +175,4 @@ class Seq2Seq(nn.Module):
     with torch.no_grad():
       enc_out, enc_hn = self.enc(input_tensor)
       dec_inp = input_tensor[:,-1][:, None]
-      return self.dec.inference(enc_out, enc_hn, dec_inp, max_len, temp)
+      # return self.dec.inference(enc_out, enc_hn, dec_inp, max_len, temp)
