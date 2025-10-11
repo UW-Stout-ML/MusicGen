@@ -1,1 +1,6 @@
 .vscode/
+.venv/
+__pycache__/
+maestro-v3.0.0/
+midis/
+songs/
