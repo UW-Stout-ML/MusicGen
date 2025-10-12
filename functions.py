@@ -63,7 +63,7 @@ def export_piano_roll(piano_roll: np.ndarray, dir, name, min_note, max_note, fs)
 
       if vel == 0:
         if start_time is None: continue # Skip empty notes
-        note = pm.Note(velocity=100, pitch=semitone, start=start_time, end=current_time)
+        note = pm.Note(velocity=vel, pitch=semitone, start=start_time, end=current_time)
         instrument.notes.append(note)
         start_time = None
       else:
@@ -72,7 +72,7 @@ def export_piano_roll(piano_roll: np.ndarray, dir, name, min_note, max_note, fs)
     # Don't forget to add the last note
     if start_time is not None:
       current_time = column_to_second(piano_roll.shape[1], fs)
-      note = pm.Note(velocity=100, pitch=semitone, start=start_time, end=current_time)
+      note = pm.Note(velocity=vel, pitch=semitone, start=start_time, end=current_time)
       instrument.notes.append(note)
       start_time = None
 
@@ -185,7 +185,11 @@ def piano_roll_to_sentence(piano_roll: np.ndarray, min_note, max_note):
       note_idx += min_note # Adjust note index to actual MIDI note number
       if vel > 0: # Note on
         if note_idx not in active_notes:
+          # 32 velocities, max is 128
+          bin_size = 128 // 32
+          quantized_velocity = int(round(vel / bin_size)) * bin_size
           sentence.append(f"{note_idx}+")
+          sentence.append(f"v{quantized_velocity}")
           active_notes.add(note_idx)
       else: # Note off
         if note_idx in active_notes:
@@ -232,6 +236,8 @@ def sentence_to_piano_roll(sentence, min_note, max_note, velocity=100):
 
   current_time_step = 0
   active_notes = set()
+  note_velocities = {}
+  last_note = None
 
   for token in sentence:
     if token == '^':
@@ -244,25 +250,29 @@ def sentence_to_piano_roll(sentence, min_note, max_note, velocity=100):
       note = int(token[:-1])
       if min_note <= note < max_note:
         active_notes.add(note)
+        last_note = note
       continue
     elif token.endswith('-'):
       note = int(token[:-1])
       if note in active_notes:
         active_notes.remove(note)
       continue
+    elif token.startswith('v'):
+      vel = int(token[1:])
+      note_velocities[last_note] = vel
 
     # Set the velocity for all active notes at the current time step
     # Notes turned on before this 'ts' are written into the previous step
     write_time_step = max(0, current_time_step - 1)
     for note in active_notes:
       if min_note <= note < max_note and write_time_step < length: # Ensure within bounds
-        piano_roll[note - min_note, write_time_step] = velocity
+        piano_roll[note - min_note, write_time_step] = note_velocities[note]
 
   # Add remaining active notes at the end
   write_time_step = max(0, current_time_step - 1)
   for note in active_notes:
     if min_note <= note < max_note and write_time_step < length: # Ensure within bounds
-      piano_roll[note - min_note, write_time_step] = velocity
+      piano_roll[note - min_note, write_time_step] = note_velocities[note]
 
   return piano_roll
 
