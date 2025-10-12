@@ -1,12 +1,16 @@
 from model import *
 from data_loader import *
+from pathlib import Path
 
-def save_model(model: Seq2Seq, epochs, path='music_gen.pt'):
-  """Save the Seq2Seq model
+cwd = Path(__file__).parent
+data_dir = cwd / 'maestro-v3.0.0'
+
+def save_model(model: MusicGen, epochs, path='music_gen.pt'):
+  """Save the MusicGen model
 
   Parameters
   ----------
-  model : Seq2Seq
+  model : MusicGen
     The model to save
   path : string
     Path to load the model
@@ -14,18 +18,17 @@ def save_model(model: Seq2Seq, epochs, path='music_gen.pt'):
   """
   torch.save({
     'model': model.state_dict(),
-    'epochs': epochs
+    'epochs': epochs,
+    'vocab_size': model.vocab_size
   }, path)
 
 def load_model(
-  vocab_size,
-  enc_input_size=16,
-  dec_input_size=16,
-  hidden_size=64,
+  input_size=32,
+  hidden_size=512,
   num_layers=2,
   path='music_gen.pt'
-) -> tuple[Seq2Seq, int]:
-  """Load the Seq2Seq model
+) -> tuple[MusicGen, int]:
+  """Load the MusicGen model
 
   Parameters
   ----------
@@ -39,72 +42,128 @@ def load_model(
   tok2idx, _ = get_dictionaries()
   sos_tok = tok2idx[('^',)]
   eos_tok = tok2idx[('$',)]
-  model = Seq2Seq(vocab_size, enc_input_size, dec_input_size, hidden_size, num_layers, sos_tok, eos_tok)
+  vocab_size = len(tok2idx)
+  model = MusicGen(vocab_size, input_size, hidden_size, num_layers, sos_tok, eos_tok)
   
   try:
     dic = torch.load(path)
     model.load_state_dict(dic['model'])
     return model, dic['epochs']
   except: # No model file found
+    print("Model not found, creating a new one...")
     return model, 0
 
 def train(
-  epochs=10,
-  batch_size=16,
-  lr=0.001,
+  # Training parameters
+  epochs=10000000,
+  batch_size=32,
+  lr=0.0001,
   forcing=0.5,
-  vocab_size=10000,
-  target_len=10,
-  model_path='music_gen.pt',
-  save_freq=10,
-  data_path='MusicRNN\\cleaned_midi'
-):
-  device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-  dataset = Corpus(data_path, vocab_size)
-  
-  loader = DataLoader(dataset, batch_size, True, collate_fn=collate_fn)
+  input_len=128,
+  target_len=1,
+  save_freq=20,
+  loss_criteria=0.0,
 
+  # Dataset parameters
+  max_vocab_size=10000,
+  data_path=data_dir,
+  max_songs=10000,
+  prob_sos=0.0,
+  max_corp_songs=float('inf'),
+  model_path='music_gen.pt',
+):
+  stage_idx = 0
+  device=torch.device("cuda" if torch.cuda.is_available() else "cpu")
+  dataset = Corpus(
+    data_path,
+    input_len,
+    target_len,
+    max_corp_songs,
+    max_songs,
+    max_vocab_size
+  )
+  
+  vocab_size = dataset.vocab_size
+
+  print(f"Vocab size: {vocab_size}")
+
+  if len(dataset) == 0:
+    print("Error: The dataset is empty!")
+    exit(1)
+
+  loader = DataLoader(dataset, batch_size, True, collate_fn=collate_fn(prob_sos, input_len, target_len))
+  
   # Load the model
-  model, epoch = load_model(vocab_size, path=model_path)
+  model, epoch = load_model(path=model_path)
   model = model.to(device)
   loss_fn = nn.CrossEntropyLoss()
   optim = torch.optim.Adam(model.parameters(), lr=lr)
 
-  for epoch in range(epoch, epochs):
-    progress_bar = tqdm(loader, desc=f"Epoch {epoch + 1}/{epochs}", position=0, nrows=2, leave=False)
-    avg_loss = 0
-    # num_losses = 0
-    for batch_idx, batch in enumerate(progress_bar):
-      batch = batch.to(device)
-      seq_lens = range(1, (batch.shape[1]), target_len)
-      progress_bar2 = tqdm(seq_lens, desc=f"Batch {batch_idx + 1}/{len(progress_bar)}", position=1, leave=False)
-      kf = 0
-      for seq_len in progress_bar2: # (batch_size, seq_len)
-        if hasattr(model, 'reset_states'):
-          model.reset_states()
-        input = batch[:,:seq_len].detach() # (batch_size, seq_len)
-        target = batch[:,seq_len:min(seq_len+target_len, batch.shape[1])].detach() # (batch_size, target_length)
-        # kf += 1
-        # if kf < 3:
-        #   print(input, target)
-        logits = model(input, target, forcing) # (batch_size, target_length, vocab_size)
-        # CrossEntropyLoss applies softmax
-        loss = loss_fn(logits.reshape(-1, vocab_size), target.reshape(-1)) # (1,)
-        # num_losses += 1
-        avg_loss += loss.item()
-        # print(loss)
-        loss.backward()
-        # clip grads
-        nn.utils.clip_grad_norm_(model.parameters(), max_norm=1.0)
-        optim.step()
-        optim.zero_grad()
-        # del logits, loss
-        # torch.cuda.empty_cache()
+  for epoch in tqdm(range(epoch, epochs), 'Training...'):
+    total_loss = 0
+    total_tok = 0
+    
+    for x in loader:
+      input = x[0]
+      target = x[1]
+      input = input.to(device)
+      target = target.to(device)
 
-      if (batch_idx + 1) % save_freq == 0:
-        print(f"Saving model... avg loss={(avg_loss/len(seq_lens)):0.4f}")
-        save_model(model, epoch, model_path)
-        avg_loss = 0
-        # num_losses = 0
+      if hasattr(model, 'reset_states'):
+        model.reset_states()
+      
+      logits = model(input, target, forcing) # (batch_size, target_length, vocab_size)
+      # CrossEntropyLoss applies softmax
+      loss = loss_fn(logits.reshape(-1, vocab_size), target.reshape(-1)) # (1,)
+      total_loss += loss.item() * target.numel()
+      total_tok += target.numel() # Gives you the number of batches
+      optim.zero_grad()
+      loss.backward()
+      # clip grads
+      nn.utils.clip_grad_norm_(model.parameters(), max_norm=1.0)
+      optim.step()
+
+    avg_loss = total_loss / total_tok
+
+    if (epoch + 1) % save_freq == 0:
+      print(f"Saving model... avg loss={avg_loss:0.4f}")
+      save_model(model, epoch, model_path)
+
+    # Update stage
+    stage = stages[stage_idx]
+    if avg_loss < loss_criteria:
+      break # Next stage
+
+def stage_train(stages):
+  for stg_idx, stage in enumerate(stages):
+    print(f"Stage {stg_idx + 1}")
+    train(**stage)
+
 if __name__ == '__main__':
-  train(target_len=1, forcing=1.0)
+  stages = [
+    {
+      'loss_criteria': 2.5,
+      'forcing': 1.0,
+      'input_len': 64,
+      'target_len': 1,
+      'prob_sos': 0,
+    },
+    {
+      'loss_criteria': 1.5,
+      'forcing': 1.0,
+      'input_len': 64,
+      'target_len': 20,
+      'prob_sos': 0.01,
+    },
+    {
+      'loss_criteria': 0.0,
+      'forcing': 1.0,
+      'input_len': 512,
+      'target_len': 5,
+      'prob_sos': 0.01,
+    },
+  ]
+
+  stage_train(stages)
+
+

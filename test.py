@@ -1,6 +1,15 @@
 from train import *
 
-def ngram_to_sentence(song, pizza=1):
+
+# torch.manual_seed(0)
+# np.random.seed(0)
+# random.seed(0)
+
+# torch.use_deterministic_algorithms(True)
+# torch.backends.cudnn.deterministic = True
+# torch.backends.cudnn.benchmark = False
+
+def ngram_to_sentence(song):
   """Convert a sequence with ngrams to a sentence"""
   _, idx2tok = get_dictionaries()
   sentence = []
@@ -8,24 +17,29 @@ def ngram_to_sentence(song, pizza=1):
     sentence += list(idx2tok[ngram.item()])
   return sentence # Now a sentence
 
-def test_model(pred_len = 1, temp = 1, path='music_gen.py'):
-  tok2idx, _ = get_dictionaries()
+def test_model(max_len=1000, temp=1, path='music_gen.pt'):
+  tok2idx, idx2tok = get_dictionaries()
   sos_tok = tok2idx[('^',)]
   eos_tok = tok2idx[('$',)]
-  model, _ = load_model(10000, path=path) # TODO: fix
-  max_len = 10
+  model, _ = load_model(path=path) # TODO: fix
 
+  song = torch.ones((1, 1), dtype=torch.long) * sos_tok
 
-  song = torch.ones((1,max_len+1), dtype=torch.long) * sos_tok
-
-  for i in range(max_len):
-    # batch_size is first for model.predict
-    prediction, is_done = model.predict(song, pred_len, temp) # (batch_size, output_len), bool
-    song = torch.cat([song, prediction], dim=1)
-    if is_done: break
+  with torch.no_grad():
+    prediction = model.predict(song, max_len, temp)
+  song = torch.cat([song, prediction], dim=1)
+  
+  # for i in range(max_len):
+  #   # batch_size is first for model.predict
+  #   # prediction, is_done = model.predict(song, pred_len, temp) # (batch_size, output_len), bool
+  #   prediction = model.predict(song, pred_len, temp) # (batch_size, output_len)
+  #   # print(song.shape, prediction.shape)
+  #   song = torch.cat([song, prediction], dim=1)
+  #   # if is_done: break
 
   song = song[0] # Get first batch
-
+  for tok in song:
+    print(idx2tok[tok.item()], end= ' ')
   # DECODE
   min_note = 1*12
   max_note = 8*12
@@ -35,10 +49,10 @@ def test_model(pred_len = 1, temp = 1, path='music_gen.py'):
   piano_roll = sentence_to_piano_roll(sentence, min_note, max_note)
   # print(piano_roll)
 
-  directory_path = 'pizzas'
+  directory_path = cwd / 'songs'
   file_count = len([entry for entry in os.listdir(directory_path) if os.path.isfile(os.path.join(directory_path, entry))])
 
-  export_piano_roll(piano_roll, directory_path, 'beautiful_pizza_'+str(file_count), min_note, max_note, fs)
+  export_piano_roll(piano_roll, directory_path, 'song_'+str(file_count), min_note, max_note, fs)
   show_midi(piano_roll)
 
-test_model(5, 0.1)
+test_model()

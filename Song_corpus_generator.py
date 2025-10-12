@@ -5,11 +5,11 @@ import os
 import re
 import numpy as np
 from functions import *
-
 from tqdm import tqdm
-ngram_len=5
 
-def identify_tokens(songs, vocab_size):
+ngram_len = 1 # Maximum n-gram length
+
+def identify_tokens(songs, max_vocab_size):
     """
     Build a vocabulary of the most frequent character n-grams.
 
@@ -22,13 +22,13 @@ def identify_tokens(songs, vocab_size):
     """
     ngram_counts = collections.Counter()
 
-    for song in tqdm(songs, desc=f"Creating and indexing top {vocab_size} n-grams"):
+    for song in tqdm(songs, desc=f"Creating and indexing top {max_vocab_size} n-grams"):
         length = len(song)
         for n in range(1, ngram_len + 1):  # n-grams of length 1 to 5
             for i in range(length - n + 1):
                 ngram_counts[tuple(song[i:i + n])] += 1
 
-    top_n = [token for token, _ in ngram_counts.most_common(vocab_size - 2)]
+    top_n = [token for token, _ in ngram_counts.most_common(max_vocab_size - 2)]
     token2idx = {token: idx for idx, token in enumerate(top_n)}
     token2idx[('^',)] = len(token2idx)
     token2idx[('$',)] = len(token2idx)
@@ -70,7 +70,7 @@ def tokenize_songs(songs, token2idx):
     return tokenized_songs
 
 
-def process_corpus(songs_list, vocab_size):
+def process_corpus(songs_list, max_vocab_size, min_song_len):
     """
     Build the cleaned corpus from scratch:
 
@@ -85,9 +85,13 @@ def process_corpus(songs_list, vocab_size):
     songs_tuple = tuple([tuple(song) for song in songs_list])
 
     # Build vocab and tokenize corpus
-    token2idx, idx2token = identify_tokens(songs_tuple, vocab_size)
+    token2idx, idx2token = identify_tokens(songs_tuple, max_vocab_size)
     tokens = tokenize_songs(songs_list, token2idx)
     # tokens_arr = np.array(tokens)
+
+    # Make sure the songs are at least min_song_len events long
+    print('min song len', min_song_len)
+    tokens = list(filter(lambda x: len(x) >= min_song_len, tokens))
 
     # Save everything
     print("Saving corpus and dictionaries...")
@@ -101,7 +105,7 @@ def process_corpus(songs_list, vocab_size):
     return tokens, token2idx, idx2token
 
 
-def get_cleaned_corpus(data_folder, vocab_size, max_songs=float('inf')) -> tuple[list[list[int]],dict,dict]:
+def get_cleaned_corpus(data_folder, max_vocab_size, max_songs=float('inf'), min_song_len=1) -> tuple[list[list[int]],dict,dict]:
     """
     Load processed corpus from disk if available, otherwise generate it.
     """
@@ -114,12 +118,15 @@ def get_cleaned_corpus(data_folder, vocab_size, max_songs=float('inf')) -> tuple
             idx2token = {int(idx): token for idx, token in joblib.load(f).items()}
         return corpus, token2idx, idx2token
 
+    if not data_folder:
+        print("Missing data folder!")
+        exit(2)
     print('Getting data...')
     songs_list = get_data(data_folder, max_songs)
     print('nsongs', len(songs_list))
 
     print('Processing corpus...')
-    return process_corpus(songs_list, vocab_size)
+    return process_corpus(songs_list, max_vocab_size, min_song_len)
 
 
 def get_dictionaries(data_folder='', vocab_size=10000, max_songs=float('inf')) -> tuple[dict, dict]:

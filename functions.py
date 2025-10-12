@@ -105,6 +105,9 @@ def combine_time_steps(sentence):
   for token in sentence:
     if token == 'ts':
       time_step_count += 1
+      if time_step_count == 100:
+        combined_sentence.append(f"ts({time_step_count})")
+        time_step_count = 0
     else:
       if time_step_count > 0:
         combined_sentence.append(f"ts({time_step_count})")
@@ -319,10 +322,9 @@ def get_data(input_dir, max_songs=float('inf'), min_note=12, max_note=96, fs=100
   fs : int
     The sampling frequency for the piano roll (notes/sec).
   """
-
   midi_file_paths = get_valid_midi_file_paths(input_dir, max_songs)
   sentences = []
-
+  
   for file_path in tqdm(midi_file_paths, desc=f"Creating {len(midi_file_paths)} sentences"):
     pretty_midi = pm.PrettyMIDI(file_path)
     piano_roll = pretty_midi_to_piano_roll(pretty_midi, min_note, max_note, fs)
