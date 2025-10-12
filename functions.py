@@ -5,6 +5,32 @@ import matplotlib.pyplot as plt
 from tqdm import tqdm
 from visuals import *
 
+instrument_groups = {
+  0: range(0, 8), # Piano → Acoustic Grand Piano
+  11: range(8, 16), # Chromatic Percussion → Vibraphone
+  17: range(16, 24), # Organ → Drawbar Organ
+  27: range(24, 32), # Guitar → Electric Guitar (Clean)
+  33: range(32, 40), # Bass → Electric Bass (Finger)
+  41: range(40, 48), # Strings → Violin
+  49: range(48, 56), # Ensemble → String Ensemble 1
+  57: range(56, 64), # Brass → Trumpet
+  65: range(64, 72), # Reed → Alto Sax
+  73: range(72, 80), # Pipe → Flute
+  81: range(80, 88), # Synth Lead → Lead 1 (Square)
+  89: range(88, 96), # Synth Pad → Pad 2 (Warm)
+  99: range(96, 104), # Synth Effects → FX 3 (Crystal)
+  105: range(104, 112), # Ethnic → Sitar
+  113: range(112, 120), # Percussive → Tinkle Bell
+  125: range(120, 128), # Sound Effects → Helicopter
+}
+
+def get_instrument_group(program_number):
+  for program, program_group in instrument_groups.items():
+    if program_number in program_group:
+      return program
+  print("Error: Unknown program number")
+  exit(3)
+
 def clean_all_midis(input_dir):
   input_files = get_valid_midi_file_paths(input_dir)
   files_names = file_paths_to_files(input_files)
@@ -57,24 +83,28 @@ def export_piano_roll(piano_roll: np.ndarray, dir, name, min_note, max_note, fs)
   
   for semitone in range(piano_roll.shape[0]):
     start_time = None # Keep track of the start time of the note
+    start_vel = None # Keep track of the initial velocity of the note
     for column in range(piano_roll.shape[1]):
       current_time = column_to_second(column, fs)
       vel = piano_roll[semitone,column]
 
       if vel == 0:
         if start_time is None: continue # Skip empty notes
-        note = pm.Note(velocity=vel, pitch=semitone, start=start_time, end=current_time)
+        note = pm.Note(velocity=start_vel, pitch=semitone, start=start_time, end=current_time)
         instrument.notes.append(note)
         start_time = None
+        start_vel = None
       else:
         if start_time == None:
           start_time = current_time
+          start_vel = int(vel)
     # Don't forget to add the last note
     if start_time is not None:
       current_time = column_to_second(piano_roll.shape[1], fs)
-      note = pm.Note(velocity=vel, pitch=semitone, start=start_time, end=current_time)
+      note = pm.Note(velocity=start_vel, pitch=semitone, start=start_time, end=current_time)
       instrument.notes.append(note)
       start_time = None
+      start_vel = None
 
   midi.instruments.append(instrument)
 
@@ -185,9 +215,10 @@ def piano_roll_to_sentence(piano_roll: np.ndarray, min_note, max_note):
       note_idx += min_note # Adjust note index to actual MIDI note number
       if vel > 0: # Note on
         if note_idx not in active_notes:
-          # 32 velocities, max is 128
-          bin_size = 128 // 32
-          quantized_velocity = int(round(vel / bin_size)) * bin_size
+          # 32 velocities, max is 127
+          vel = min(vel, 127) # Cap for safety
+          bin_size = 127 / 32
+          quantized_velocity = int(round(vel / bin_size) * bin_size)
           sentence.append(f"{note_idx}+")
           sentence.append(f"v{quantized_velocity}")
           active_notes.add(note_idx)
@@ -208,7 +239,7 @@ def piano_roll_to_sentence(piano_roll: np.ndarray, min_note, max_note):
 
   return combine_time_steps(sentence)
 
-def sentence_to_piano_roll(sentence, min_note, max_note, velocity=100):
+def sentence_to_piano_roll(sentence, min_note, max_note):
   """Convert a sentence back to a piano roll.
 
   Parameters

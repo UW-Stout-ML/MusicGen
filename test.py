@@ -50,7 +50,7 @@ def test_model(max_len=1500, temp=0.5, path='music_gen.pt'):
   piano_roll = sentence_to_piano_roll(sentence, min_note, max_note)
   # print(piano_roll)
 
-  directory_path = cwd / 'songs'
+  directory_path = cwd / 'output_songs'
   file_count = len([entry for entry in os.listdir(directory_path) if os.path.isfile(os.path.join(directory_path, entry))])
 
   export_piano_roll(piano_roll, directory_path, 'song_'+str(file_count), min_note, max_note, fs)

@@ -1,10 +1,10 @@
 import matplotlib.pyplot as plt
 
-def show_midi(piano_roll):
+def show_midi(piano_roll, aspect='equal'):
   fig, ax = plt.subplots()
-  plt.imshow(piano_roll)
-  plt.tight_layout()
+  ax.imshow(piano_roll, aspect=aspect, interpolation='none')     
   ax.invert_yaxis()
+  plt.tight_layout()
   plt.show()
 
 def compare_midis(piano_roll_0, piano_roll_1, start_sec=0, end_sec=None):

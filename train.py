@@ -3,7 +3,7 @@ from data_loader import *
 from pathlib import Path
 
 cwd = Path(__file__).parent
-data_dir = cwd / 'maestro-v3.0.0'
+data_dir = cwd / 'multi_note_songs'
 
 def save_model(model: MusicGen, epochs, path='music_gen.pt'):
   """Save the MusicGen model
@@ -47,12 +47,16 @@ def load_model(
   model = MusicGen(vocab_size, input_size, hidden_size, num_layers, sos_tok, eos_tok)
   
   try:
+    print(f"Loading model file: {path}")
     dic = torch.load(path, map_location=device)
-    model.load_state_dict(dic['model'])
-    return model, dic['epochs']
-  except: # No model file found
+  except Exception as e: # No model file found
+    print(e)
     print("Model not found, creating a new one...")
+    exit()
     return model, 0
+  
+  model.load_state_dict(dic['model'])
+  return model, dic['epochs']
 
 def train(
   # Training parameters
@@ -152,6 +156,7 @@ if __name__ == '__main__':
   stages = [
     {
       'loss_criteria': 2.5,
+      'save_freq': 10,
       'forcing': 1.0,
       'input_len': 32,
       'target_len': 1,
@@ -159,6 +164,7 @@ if __name__ == '__main__':
     },
     {
       'loss_criteria': 1.6,
+      'save_freq': 10,
       'forcing': 1.0,
       'input_len': 50,
       'target_len': 12,
@@ -166,6 +172,7 @@ if __name__ == '__main__':
     },
     {
       'loss_criteria': 1.1,
+      'save_freq': 2,
       'forcing': 1.0,
       'input_len': 100,
       'target_len': 50,
@@ -173,6 +180,7 @@ if __name__ == '__main__':
     },
     {
       'loss_criteria': 0.0,
+      'save_freq': 2,
       'forcing': 1.0,
       'input_len': (100, 500),
       'target_len': 30,
