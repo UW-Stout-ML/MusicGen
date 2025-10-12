@@ -5,35 +5,6 @@ from torch.nn.utils.rnn import pack_sequence, pad_sequence
 from torch.utils.data import Dataset, DataLoader
 import random
 
-def get_collate_fn(target_len):
-  def collate_fn(batch: list[torch.tensor]):
-    # enforce_sorted should be False if the dataset is not sorted
-    # it will be sorted if it is set to False, but will be slower
-    # return pack_sequence(batch, enforce_sorted=False)
-    # eos_tok = tok2idx[('$',)]
-    # Find the biggest song and fill the rest with the eos token
-    # return pad_sequence(batch, batch_first=True, padding_value=eos_tok)
-    
-    min_len = min([t.shape[0] for t in batch])
-    batch = [t[:min_len] for t in batch]
-    batch = torch.stack(batch, dim=0)
-
-    # Random pizzas
-    full_song_len = min_len
-    # song_len = random.randint(target_len + 1, full_song_len)  
-    song_len = 40
-
-    output = (
-      batch[:,:song_len-target_len],
-      batch[:,song_len-target_len:song_len]
-    )
-
-    # print('collate', song_len, target_len, min_len)
-
-    return output
-
-  return collate_fn
-
 class Corpus(Dataset):
   def __init__(
     self,
@@ -43,10 +14,12 @@ class Corpus(Dataset):
     max_corp_songs=float('inf'),
     max_songs=float('inf'),
     max_vocab_size=float('inf'),
+    min_song_len=None,
   ):
+    self.max_input_len = input_len
     self.input_len = input_len
     self.target_len = target_len
-    self.min_song_len = input_len + target_len + 1
+    self.min_song_len = input_len + target_len + 1 if min_song_len is None else min_song_len
     corpus_list, tok2idx, _ = get_cleaned_corpus(data_path, max_vocab_size, max_corp_songs, self.min_song_len)
     self.vocab_size = len(tok2idx)
 
@@ -66,3 +39,6 @@ class Corpus(Dataset):
     input = song[start_idx:mid_idx]
     target = song[mid_idx:end_idx]
     return input, target
+
+  def randomize_input_size(self):
+    self.input_len = random.randint(1, self.max_input_len)

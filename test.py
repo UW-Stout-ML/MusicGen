@@ -17,7 +17,7 @@ def ngram_to_sentence(song):
     sentence += list(idx2tok[ngram.item()])
   return sentence # Now a sentence
 
-def test_model(max_len=50, temp=0.3, path='music_gen.pt'):
+def test_model(max_len=50, temp=0.5, path='music_gen.pt'):
   tok2idx, _ = get_dictionaries()
   sos_tok = tok2idx[('^',)]
   eos_tok = tok2idx[('$',)]
@@ -27,6 +27,7 @@ def test_model(max_len=50, temp=0.3, path='music_gen.pt'):
 
   with torch.no_grad():
     prediction = model.predict(song, max_len, temp)
+  
   song = torch.cat([song, prediction], dim=1)
   
   # for i in range(max_len):

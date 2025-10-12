@@ -58,16 +58,17 @@ def train(
   epochs=10000,
   batch_size=16,
   lr=0.0001,
-  forcing=0.0,
+  forcing=0.5,
   input_len=40,
   target_len=10,
-  save_freq=1,
+  save_freq=10,
 
   # Dataset parameters
   max_vocab_size=10000,
   data_path=data_dir,
   max_songs=10000,
   max_corp_songs=100,
+  min_song_len=100,
   model_path='music_gen.pt',
 ):
   device=torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -77,12 +78,14 @@ def train(
     target_len,
     max_corp_songs,
     max_songs,
-    max_vocab_size
+    max_vocab_size,
+    min_song_len
   )
   
   vocab_size = dataset.vocab_size
 
   print(f"Vocab size: {vocab_size}")
+  print(f"Dataset size: {len(dataset)}")
 
   if len(dataset) == 0:
     print("Error: The dataset is empty!")
@@ -97,6 +100,7 @@ def train(
   optim = torch.optim.Adam(model.parameters(), lr=lr)
 
   for epoch in tqdm(range(epoch, epochs), 'Training...'):
+    dataset.randomize_input_size()
     total_loss = 0
     total_tok = 0
     for x in loader:
@@ -120,7 +124,7 @@ def train(
       optim.step()
     
     if (epoch + 1) % save_freq == 0:
-      print(f"Saving model... avg loss={(total_loss/total_tok):0.4f}")
+      print(f"Saving model... avg loss={(total_loss/total_tok):0.4f} input_len={dataset.input_len}")
       save_model(model, epoch, model_path)
 
 if __name__ == '__main__':
