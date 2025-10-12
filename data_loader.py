@@ -14,12 +14,10 @@ class Corpus(Dataset):
     max_corp_songs=float('inf'),
     max_songs=float('inf'),
     max_vocab_size=float('inf'),
-    min_song_len=None,
   ):
-    self.max_input_len = input_len
     self.input_len = input_len
     self.target_len = target_len
-    self.min_song_len = input_len + target_len + 1 if min_song_len is None else min_song_len
+    self.min_song_len = input_len + target_len + 1
     corpus_list, tok2idx, _ = get_cleaned_corpus(data_path, max_vocab_size, max_corp_songs, self.min_song_len)
     self.vocab_size = len(tok2idx)
 
@@ -39,6 +37,3 @@ class Corpus(Dataset):
     input = song[start_idx:mid_idx]
     target = song[mid_idx:end_idx]
     return input, target
-
-  def randomize_input_size(self):
-    self.input_len = random.randint(1, self.max_input_len)

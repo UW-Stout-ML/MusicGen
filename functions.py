@@ -106,7 +106,7 @@ def combine_time_steps(sentence):
     if token == 'ts':
       time_step_count += 1
       if time_step_count == 100:
-        combined_sentence.append(f"ts(100)")
+        combined_sentence.append(f"ts({time_step_count})")
         time_step_count = 0
     else:
       if time_step_count > 0:

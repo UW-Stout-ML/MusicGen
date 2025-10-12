@@ -3,7 +3,7 @@ from data_loader import *
 from pathlib import Path
 
 cwd = Path(__file__).parent
-data_dir = cwd / 'midis'
+data_dir = cwd / 'cleaned_midi'
 
 def save_model(model: MusicGen, epochs, path='music_gen.pt'):
   """Save the MusicGen model
@@ -55,20 +55,19 @@ def load_model(
 
 def train(
   # Training parameters
-  epochs=10000,
-  batch_size=16,
+  epochs=10000000,
+  batch_size=32,
   lr=0.0001,
   forcing=0.5,
-  input_len=40,
-  target_len=10,
-  save_freq=10,
+  input_len=44,
+  target_len=20,
+  save_freq=20,
 
   # Dataset parameters
   max_vocab_size=10000,
   data_path=data_dir,
   max_songs=10000,
   max_corp_songs=100,
-  min_song_len=100,
   model_path='music_gen.pt',
 ):
   device=torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -78,14 +77,12 @@ def train(
     target_len,
     max_corp_songs,
     max_songs,
-    max_vocab_size,
-    min_song_len
+    max_vocab_size
   )
   
   vocab_size = dataset.vocab_size
 
   print(f"Vocab size: {vocab_size}")
-  print(f"Dataset size: {len(dataset)}")
 
   if len(dataset) == 0:
     print("Error: The dataset is empty!")
@@ -100,7 +97,6 @@ def train(
   optim = torch.optim.Adam(model.parameters(), lr=lr)
 
   for epoch in tqdm(range(epoch, epochs), 'Training...'):
-    dataset.randomize_input_size()
     total_loss = 0
     total_tok = 0
     for x in loader:
@@ -124,7 +120,7 @@ def train(
       optim.step()
     
     if (epoch + 1) % save_freq == 0:
-      print(f"Saving model... avg loss={(total_loss/total_tok):0.4f} input_len={dataset.input_len}")
+      print(f"Saving model... avg loss={(total_loss/total_tok):0.4f}")
       save_model(model, epoch, model_path)
 
 if __name__ == '__main__':

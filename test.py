@@ -1,13 +1,13 @@
 from train import *
 
 
-torch.manual_seed(0)
-np.random.seed(0)
-random.seed(0)
+# torch.manual_seed(0)
+# np.random.seed(0)
+# random.seed(0)
 
-torch.use_deterministic_algorithms(True)
-torch.backends.cudnn.deterministic = True
-torch.backends.cudnn.benchmark = False
+# torch.use_deterministic_algorithms(True)
+# torch.backends.cudnn.deterministic = True
+# torch.backends.cudnn.benchmark = False
 
 def ngram_to_sentence(song):
   """Convert a sequence with ngrams to a sentence"""
@@ -17,8 +17,8 @@ def ngram_to_sentence(song):
     sentence += list(idx2tok[ngram.item()])
   return sentence # Now a sentence
 
-def test_model(max_len=50, temp=0.5, path='music_gen.pt'):
-  tok2idx, _ = get_dictionaries()
+def test_model(max_len=1000, temp=1, path='music_gen.pt'):
+  tok2idx, idx2tok = get_dictionaries()
   sos_tok = tok2idx[('^',)]
   eos_tok = tok2idx[('$',)]
   model, _ = load_model(path=path) # TODO: fix
@@ -27,7 +27,6 @@ def test_model(max_len=50, temp=0.5, path='music_gen.pt'):
 
   with torch.no_grad():
     prediction = model.predict(song, max_len, temp)
-  
   song = torch.cat([song, prediction], dim=1)
   
   # for i in range(max_len):
@@ -39,7 +38,6 @@ def test_model(max_len=50, temp=0.5, path='music_gen.pt'):
   #   # if is_done: break
 
   song = song[0] # Get first batch
-  print(song)
   # DECODE
   min_note = 1*12
   max_note = 8*12
