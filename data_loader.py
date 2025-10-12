@@ -5,10 +5,14 @@ from torch.nn.utils.rnn import pack_sequence, pad_sequence
 from torch.utils.data import Dataset, DataLoader
 import random
 
-def collate_fn(prob_sos, input_len, target_len):
-  min_song_len = input_len + target_len + 1
-
+def collate_fn(prob_sos, min_input_len, max_input_len, min_target_len, max_target_len):
   def collate(batch):
+    # min_song_len = min([t.shape[0] for t in batch])
+    # input_len + target_len <= min_song_len
+    
+    input_len = random.randint(min_input_len, max_input_len)
+    target_len = random.randint(min_target_len, max_target_len)
+
     sos_mode = random.random() < prob_sos
     inputs = torch.empty((len(batch), input_len), dtype=torch.long)
     targets = torch.empty((len(batch), target_len), dtype=torch.long)
@@ -23,7 +27,7 @@ def collate_fn(prob_sos, input_len, target_len):
         mid_idx = 1
       else:
         # Big slice
-        start_idx = random.randint(0, song.shape[0] - min_song_len - 1)
+        start_idx = random.randint(0, song.shape[0] - input_len - target_len)
         mid_idx = start_idx + input_len
       
       end_idx = mid_idx + target_len
@@ -42,24 +46,21 @@ class Corpus(Dataset):
   def __init__(
     self,
     data_path,
-    input_len,
-    target_len,
+    min_song_len,
     max_corp_songs=float('inf'),
     max_songs=float('inf'),
     max_vocab_size=float('inf'),
   ):
     self.sos_mode = False
-    self.max_input_len = input_len
-    self.input_len = input_len
-    self.target_len = target_len
-    self.min_song_len = input_len + target_len + 1
-    corpus_list, tok2idx, _ = get_cleaned_corpus(data_path, max_vocab_size, max_corp_songs, self.min_song_len)
+    corpus_list, tok2idx, _ = get_cleaned_corpus(data_path, max_vocab_size, max_corp_songs)
     self.vocab_size = len(tok2idx)
     # print(tok2idx.keys())
 
     # This is our dataset of encoded sentences
     self.corpus = [torch.tensor(l) for l in corpus_list]
-    self.corpus = list(filter(lambda t: t.shape[0] >= self.min_song_len, self.corpus))
+    
+    # Model die time!
+    self.corpus = list(filter(lambda t: t.shape[0] >= min_song_len, self.corpus))
 
     if max_songs is not None:
       self.corpus = self.corpus[:max_songs]
@@ -80,3 +81,4 @@ class Corpus(Dataset):
     # target = song[mid_idx:end_idx]
     
     # return song, input, target
+    

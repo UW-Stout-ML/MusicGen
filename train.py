@@ -24,9 +24,10 @@ def save_model(model: MusicGen, epochs, path='music_gen.pt'):
 
 def load_model(
   input_size=32,
-  hidden_size=512,
-  num_layers=2,
-  path='music_gen.pt'
+  hidden_size=1028,
+  num_layers=3,
+  path='music_gen.pt',
+  device='cuda'
 ) -> tuple[MusicGen, int]:
   """Load the MusicGen model
 
@@ -46,7 +47,7 @@ def load_model(
   model = MusicGen(vocab_size, input_size, hidden_size, num_layers, sos_tok, eos_tok)
   
   try:
-    dic = torch.load(path)
+    dic = torch.load(path, map_location=device)
     model.load_state_dict(dic['model'])
     return model, dic['epochs']
   except: # No model file found
@@ -61,7 +62,7 @@ def train(
   forcing=0.5,
   input_len=128,
   target_len=1,
-  save_freq=20,
+  save_freq=2,
   loss_criteria=0.0,
 
   # Dataset parameters
@@ -72,12 +73,18 @@ def train(
   max_corp_songs=float('inf'),
   model_path='music_gen.pt',
 ):
+  # Calculate min and max input/target length
+  min_input_len = input_len if isinstance(input_len, (int, float)) else list(input_len)[0]
+  max_input_len = input_len if isinstance(input_len, (int, float)) else list(input_len)[-1]
+  min_target_len = target_len if isinstance(target_len, (int, float)) else list(target_len)[0]
+  max_target_len = target_len if isinstance(target_len, (int, float)) else list(target_len)[-1]
+  min_song_len = max_input_len + max_target_len
+
   stage_idx = 0
   device=torch.device("cuda" if torch.cuda.is_available() else "cpu")
   dataset = Corpus(
     data_path,
-    input_len,
-    target_len,
+    min_song_len,
     max_corp_songs,
     max_songs,
     max_vocab_size
@@ -91,10 +98,12 @@ def train(
     print("Error: The dataset is empty!")
     exit(1)
 
-  loader = DataLoader(dataset, batch_size, True, collate_fn=collate_fn(prob_sos, input_len, target_len))
+  loader = DataLoader(dataset, batch_size, True, collate_fn=collate_fn(
+    prob_sos, min_input_len, max_input_len, min_target_len, max_target_len
+  ))
   
   # Load the model
-  model, epoch = load_model(path=model_path)
+  model, epoch = load_model(path=model_path, device=device)
   model = model.to(device)
   loss_fn = nn.CrossEntropyLoss()
   optim = torch.optim.Adam(model.parameters(), lr=lr)
@@ -144,23 +153,31 @@ if __name__ == '__main__':
     {
       'loss_criteria': 2.5,
       'forcing': 1.0,
-      'input_len': 64,
+      'input_len': 32,
       'target_len': 1,
       'prob_sos': 0,
     },
     {
-      'loss_criteria': 1.5,
+      'loss_criteria': 1.6,
       'forcing': 1.0,
-      'input_len': 64,
-      'target_len': 20,
+      'input_len': 50,
+      'target_len': 12,
+      'prob_sos': 0.01,
+    },
+    {
+      'loss_criteria': 1.1,
+      'forcing': 1.0,
+      'input_len': 100,
+      'target_len': 50,
       'prob_sos': 0.01,
     },
     {
       'loss_criteria': 0.0,
       'forcing': 1.0,
-      'input_len': 512,
-      'target_len': 5,
+      'input_len': (100, 500),
+      'target_len': 30,
       'prob_sos': 0.01,
+      'batch_size':32,
     },
   ]
 

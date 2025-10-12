@@ -1,0 +1,4 @@
+[ ] Add velocity
+[ ] New dataset with multiple instruments
+[ ] Add instruments
+[ ] Train on end of sentence

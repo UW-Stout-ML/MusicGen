@@ -17,11 +17,12 @@ def ngram_to_sentence(song):
     sentence += list(idx2tok[ngram.item()])
   return sentence # Now a sentence
 
-def test_model(max_len=1000, temp=1, path='music_gen.pt'):
+def test_model(max_len=1500, temp=0.5, path='music_gen.pt'):
+  device=torch.device("cuda" if torch.cuda.is_available() else "cpu")
   tok2idx, idx2tok = get_dictionaries()
   sos_tok = tok2idx[('^',)]
   eos_tok = tok2idx[('$',)]
-  model, _ = load_model(path=path) # TODO: fix
+  model, _ = load_model(path=path, device=device) # TODO: fix
 
   song = torch.ones((1, 1), dtype=torch.long) * sos_tok
 
