@@ -41,19 +41,18 @@ def test_model(max_len=1500, temp=0.5, path='music_gen.pt'):
   song = song[0] # Get first batch
   for tok in song:
     print(idx2tok[tok.item()], end= ' ')
-  # DECODE
-  min_note = 1*12
-  max_note = 8*12
+  
   fs = 100
   sentence = ngram_to_sentence(song)
-  # print(sentence)
-  piano_roll = sentence_to_piano_roll(sentence, min_note, max_note)
-  # print(piano_roll)
-
+  
   directory_path = cwd / 'output_songs'
   file_count = len([entry for entry in os.listdir(directory_path) if os.path.isfile(os.path.join(directory_path, entry))])
+  file_path = directory_path / f"song_{str(file_count)}.mid"
 
-  export_piano_roll(piano_roll, directory_path, 'song_'+str(file_count), min_note, max_note, fs)
-  show_midi(piano_roll)
+  pretty_midi = sentence_to_pretty_midi(sentence, fs)
+  
+  show_pretty_midi(pretty_midi)
+  
+  pretty_midi.write(file_path)
 
 test_model()

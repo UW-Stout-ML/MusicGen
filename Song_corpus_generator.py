@@ -90,7 +90,6 @@ def process_corpus(songs_list, max_vocab_size, min_song_len):
     # tokens_arr = np.array(tokens)
 
     # Make sure the songs are at least min_song_len events long
-    print('min song len', min_song_len)
     tokens = list(filter(lambda x: len(x) >= min_song_len, tokens))
 
     # Save everything
@@ -123,13 +122,12 @@ def get_cleaned_corpus(data_folder, max_vocab_size, max_songs=float('inf'), min_
         exit(2)
     print('Getting data...')
     songs_list = get_data(data_folder, max_songs)
-    print('nsongs', len(songs_list))
 
     print('Processing corpus...')
     return process_corpus(songs_list, max_vocab_size, min_song_len)
 
 
-def get_dictionaries(data_folder='', vocab_size=10000, max_songs=float('inf')) -> tuple[dict, dict]:
+def get_dictionaries(data_folder='', max_vocab_size=10000, max_songs=float('inf')) -> tuple[dict, dict]:
     """Load token dictionaries from disk if available, otherwise build them.
     Returns
     -------
@@ -137,4 +135,4 @@ def get_dictionaries(data_folder='', vocab_size=10000, max_songs=float('inf')) -
         A dictionary that maps from a token str to an encoded number.
     idx2tok : dict
     """
-    return get_cleaned_corpus(data_folder, vocab_size, max_songs)[1:]
+    return get_cleaned_corpus(data_folder, max_vocab_size, max_songs)[1:]

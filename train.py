@@ -52,7 +52,7 @@ def load_model(
   except Exception as e: # No model file found
     print(e)
     print("Model not found, creating a new one...")
-    exit()
+    # exit() # Safety mechanism
     return model, 0
   
   model.load_state_dict(dic['model'])
