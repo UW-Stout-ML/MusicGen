@@ -307,6 +307,136 @@ def sentence_to_piano_roll(sentence, min_note, max_note):
 
   return piano_roll
 
+# New method for parsing a PrettyMIDI object to a sentence and vice versa
+
+def combined_instrument_notes(pretty_midi: pm.PrettyMIDI, fs=100):
+  # Concat all the notes from all the instruments into one list
+  events = [] # (instrument, time, pitch, velocity, is_on)
+
+  for inst in pretty_midi.instruments:
+    for note in inst.notes:
+      start_time = int(note.start * fs)
+      end_time = int(note.end * fs)
+      events.append((inst.program, start_time, note.pitch, note.velocity, True))
+      events.append((inst.program, end_time, note.pitch, note.velocity, False))
+  
+  return sorted(events, key=lambda x: x[1]) # Sort by time
+
+def pretty_midi_to_sentence(pretty_midi: pm.PrettyMIDI, fs=100, combine_instruments=True) -> list[str]:
+  """Skipping the piano roll step because we are using multiple instruments now.
+  
+  Parameters
+  ----------
+  pretty_midi : PrettyMIDI
+    The PrettyMIDI object to convert to a sentence.
+  min_note : int
+    The minimum note (inclusive) in the piano roll.
+  max_note : int
+    The maximum note (exclusive) in the piano roll.
+  fs : int
+    The sampling frequency for the piano roll (notes/sec).
+
+  Returns
+  -------
+  sentence : list[str]
+    The sentence representation of the PrettyMIDI object.
+  """
+  
+  def quantize_velocity(vel):
+    max_vel = 127
+    min_vel = 10
+    num_bins = 32
+    quantize = max_vel / num_bins
+    new_vel = int(round(vel / quantize) * quantize)
+    new_vel = max(min_vel, new_vel)
+    new_vel = min(max_vel, new_vel)
+    return new_vel
+
+  notes = combined_instrument_notes(pretty_midi, fs)
+  note_idx = 0
+  last_time = 0
+  sentence = []
+  active_notes = set()
+  note_played = False
+  
+  while note_idx < len(notes):
+    inst, time, pitch, vel, is_on = notes[note_idx]
+    note_idx += 1
+    vel = quantize_velocity(vel)
+
+    if combine_instruments:
+      inst = get_instrument_group(inst)
+
+    while time > last_time:
+      diff = min(time - last_time, fs)
+      last_time += diff
+      if note_played:
+        sentence += [f"t{diff}"]
+
+    if is_on and (pitch, inst) not in active_notes:
+      sentence += [f"p{inst}"]
+      sentence += [f"v{vel}"]
+      sentence += [f"+{pitch}"]
+      active_notes.add((pitch, inst))
+      note_played = True
+    elif not is_on and (pitch, inst) in active_notes:
+      sentence += [f"p{inst}"]
+      sentence += [f"-{pitch}"]
+      active_notes.remove((pitch, inst))
+  
+  return sentence
+
+def sentence_to_pretty_midi(sentence, fs):
+  """Parse sentence to PrettyMIDI object.
+  
+  Parameters
+  ----------
+  sentence : list[str]
+    The sentence to parse to a PrettyMIDI object.
+  
+  Returns
+  -------
+  pretty_midi : PrettyMIDI
+    The PrettyMIDI object created from the sentence.
+  """
+
+  pretty_midi = pm.PrettyMIDI()
+  instruments = {}
+  active_notes = {}
+  vel = 100
+  inst = 0
+  time = 0
+
+  for idx, note in enumerate(sentence):
+    if note[0] == 't': # Time step
+      step = int(note[1:]) / fs
+      time += step
+    elif note[0] == 'v': # Update velocity
+      vel = int(note[1:])
+    elif note[0] == 'p': # Update instrument
+      inst = int(note[1:])
+    elif note[0] == '+': # Note on
+      pitch = int(note[1:])
+      active_notes[(pitch, inst)] = (time, vel)
+    elif note[0] == '-': # Note off
+      pitch = int(note[1:])
+      start_time, vel = active_notes.pop((pitch, inst))
+      
+      # Create instrument if not created
+      if inst not in instruments:
+        instruments[inst] = pm.Instrument(program=inst)
+      
+      note = pm.Note(velocity=vel, pitch=pitch, start=start_time, end=time)
+      instruments[inst].notes.append(note)
+    else:
+      print(f"Error: Unknown note {note}")
+      exit(4)
+
+  for inst in instruments.values():
+    pretty_midi.instruments.append(inst)
+
+  return pretty_midi
+
 # Vectorized functions
 def pretty_midis_to_piano_rolls(pretty_midis, min_note, max_note, fs):
   return [pretty_midi_to_piano_roll(midi, min_note, max_note, fs) for midi in pretty_midis]
@@ -347,7 +477,7 @@ def sentences_to_piano_rolls(sentences, min_note, max_note):
 
 # Get data function
 
-def get_data(input_dir, max_songs=float('inf'), min_note=12, max_note=96, fs=100):
+def get_data(input_dir, max_songs=float('inf'), fs=100):
   """Get a list of sentences (list of str) from MIDI files in the input directory.
   
   Parameters
@@ -368,8 +498,7 @@ def get_data(input_dir, max_songs=float('inf'), min_note=12, max_note=96, fs=100
   
   for file_path in tqdm(midi_file_paths, desc=f"Creating {len(midi_file_paths)} sentences"):
     pretty_midi = pm.PrettyMIDI(file_path)
-    piano_roll = pretty_midi_to_piano_roll(pretty_midi, min_note, max_note, fs)
-    sentence = piano_roll_to_sentence(piano_roll, min_note, max_note)
+    sentence = pretty_midi_to_sentence(pretty_midi, fs)
     sentences += [sentence]
 
   return sentences

@@ -1,4 +1,5 @@
 import matplotlib.pyplot as plt
+import pretty_midi as pm
 
 def show_midi(piano_roll, aspect='equal'):
   fig, ax = plt.subplots()
@@ -6,6 +7,10 @@ def show_midi(piano_roll, aspect='equal'):
   ax.invert_yaxis()
   plt.tight_layout()
   plt.show()
+
+def show_pretty_midi(pretty_midi: pm.PrettyMIDI, aspect='equal'):
+  piano_roll = pretty_midi.get_piano_roll(fs=100)
+  show_midi(piano_roll, aspect=aspect)
 
 def compare_midis(piano_roll_0, piano_roll_1, start_sec=0, end_sec=None):
   if end_sec is None:
