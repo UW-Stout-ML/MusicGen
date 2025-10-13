@@ -16,11 +16,15 @@ def save_model(model: MusicGen, epochs, path='music_gen.pt'):
     Path to load the model
 
   """
-  torch.save({
-    'model': model.state_dict(),
-    'epochs': epochs,
-    'vocab_size': model.vocab_size
-  }, path)
+  try:
+    torch.save({
+      'model': model.state_dict(),
+      'epochs': epochs,
+      'vocab_size': model.vocab_size
+    }, path)
+  except Exception as e:
+    print(e)
+    print("Error: Failed to save model")
 
 def load_model(
   input_size=32,
@@ -163,7 +167,7 @@ if __name__ == '__main__':
       'prob_sos': 0,
     },
     {
-      'loss_criteria': 1.6,
+      'loss_criteria': 1.7,
       'save_freq': 10,
       'forcing': 1.0,
       'input_len': 50,
@@ -171,7 +175,7 @@ if __name__ == '__main__':
       'prob_sos': 0.01,
     },
     {
-      'loss_criteria': 1.1,
+      'loss_criteria': 1.6,
       'save_freq': 2,
       'forcing': 1.0,
       'input_len': 100,
@@ -182,8 +186,8 @@ if __name__ == '__main__':
       'loss_criteria': 0.0,
       'save_freq': 2,
       'forcing': 1.0,
-      'input_len': (100, 500),
-      'target_len': 30,
+      'input_len': (100, 1000),
+      'target_len': 50,
       'prob_sos': 0.01,
       'batch_size':32,
     },
