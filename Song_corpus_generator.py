@@ -70,6 +70,15 @@ def tokenize_songs(songs, token2idx):
     return tokenized_songs
 
 
+def ngram_to_sentence(song, dicts):
+  """Convert a sequence with ngrams to a sentence"""
+  _, idx2tok = dicts
+  sentence = []
+  for ngram in song:
+    sentence += list(idx2tok[ngram if isinstance(ngram, int) else ngram.item()])
+  return sentence # Now a sentence
+
+
 def process_corpus(songs_list, max_vocab_size, min_song_len):
     """
     Build the cleaned corpus from scratch:

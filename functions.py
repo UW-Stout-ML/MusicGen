@@ -309,12 +309,14 @@ def sentence_to_piano_roll(sentence, min_note, max_note):
 
 # New method for parsing a PrettyMIDI object to a sentence and vice versa
 
-def combined_instrument_notes(pretty_midi: pm.PrettyMIDI, fs=100):
+def combined_instrument_events(pretty_midi: pm.PrettyMIDI, fs=100):
   # Concat all the notes from all the instruments into one list
   events = [] # (instrument, time, pitch, velocity, is_on)
 
   for inst in pretty_midi.instruments:
+    if inst.is_drum: continue
     for note in inst.notes:
+      if note.pitch > 127 or note.pitch < 0: continue
       start_time = int(note.start * fs)
       end_time = int(note.end * fs)
       events.append((inst.program, start_time, note.pitch, note.velocity, True))
@@ -347,22 +349,23 @@ def pretty_midi_to_sentence(pretty_midi: pm.PrettyMIDI, fs=100, combine_instrume
     min_vel = 10
     num_bins = 32
     quantize = max_vel / num_bins
-    new_vel = int(round(vel / quantize) * quantize)
+    new_vel = round(vel / quantize) * quantize
     new_vel = max(min_vel, new_vel)
     new_vel = min(max_vel, new_vel)
-    return new_vel
+    return int(new_vel)
 
-  notes = combined_instrument_notes(pretty_midi, fs)
+  events = combined_instrument_events(pretty_midi, fs)
   note_idx = 0
   last_time = 0
   sentence = []
   active_notes = set()
   note_played = False
   
-  while note_idx < len(notes):
-    inst, time, pitch, vel, is_on = notes[note_idx]
+  while note_idx < len(events):
+    inst, time, pitch, vel, is_on = events[note_idx]
     note_idx += 1
     vel = quantize_velocity(vel)
+    
 
     if combine_instruments:
       inst = get_instrument_group(inst)
@@ -374,19 +377,22 @@ def pretty_midi_to_sentence(pretty_midi: pm.PrettyMIDI, fs=100, combine_instrume
         sentence += [f"t{diff}"]
 
     if is_on and (pitch, inst) not in active_notes:
-      sentence += [f"p{inst}"]
+      # sentence += [f"p{inst}"]
+      # sentence += [f"v{vel}"]
+      # sentence += [f"+{pitch}"]
       sentence += [f"v{vel}"]
-      sentence += [f"+{pitch}"]
+      sentence += [f"+{pitch}p{inst}"]
       active_notes.add((pitch, inst))
       note_played = True
     elif not is_on and (pitch, inst) in active_notes:
-      sentence += [f"p{inst}"]
-      sentence += [f"-{pitch}"]
+      # sentence += [f"p{inst}"]
+      # sentence += [f"-{pitch}"]
+      sentence += [f"-{pitch}p{inst}"]
       active_notes.remove((pitch, inst))
   
   return sentence
 
-def sentence_to_pretty_midi(sentence, fs):
+def sentence_to_pretty_midi(sentence, fs=100):
   """Parse sentence to PrettyMIDI object.
   
   Parameters
@@ -413,13 +419,21 @@ def sentence_to_pretty_midi(sentence, fs):
       time += step
     elif note[0] == 'v': # Update velocity
       vel = int(note[1:])
-    elif note[0] == 'p': # Update instrument
-      inst = int(note[1:])
+    # elif note[0] == 'p': # Update instrument
+    #   inst = int(note[1:])
     elif note[0] == '+': # Note on
-      pitch = int(note[1:])
+      idx = note.index('p')
+      pitch = int(note[1:idx])
+      inst = int(note[idx+1:])
       active_notes[(pitch, inst)] = (time, vel)
     elif note[0] == '-': # Note off
-      pitch = int(note[1:])
+      idx = note.index('p')
+      pitch = int(note[1:idx])
+      inst = int(note[idx+1:])
+      
+      if (pitch, inst) not in active_notes:
+        continue
+      
       start_time, vel = active_notes.pop((pitch, inst))
       
       # Create instrument if not created
@@ -428,6 +442,8 @@ def sentence_to_pretty_midi(sentence, fs):
       
       note = pm.Note(velocity=vel, pitch=pitch, start=start_time, end=time)
       instruments[inst].notes.append(note)
+    elif note == '^' or note == '$':
+      continue
     else:
       print(f"Error: Unknown note {note}")
       exit(4)
@@ -497,7 +513,12 @@ def get_data(input_dir, max_songs=float('inf'), fs=100):
   sentences = []
   
   for file_path in tqdm(midi_file_paths, desc=f"Creating {len(midi_file_paths)} sentences"):
-    pretty_midi = pm.PrettyMIDI(file_path)
+    try:
+      print(file_path)
+      pretty_midi = pm.PrettyMIDI(file_path)
+    except Exception as e:
+      print(e)
+      print("Error: Failed to load song")
     sentence = pretty_midi_to_sentence(pretty_midi, fs)
     sentences += [sentence]
 

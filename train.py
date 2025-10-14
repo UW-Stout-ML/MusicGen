@@ -3,7 +3,7 @@ from data_loader import *
 from pathlib import Path
 
 cwd = Path(__file__).parent
-data_dir = cwd / 'multi_note_songs'
+data_dir = cwd / 'POP909'
 
 def save_model(model: MusicGen, epochs, path='music_gen.pt'):
   """Save the MusicGen model
@@ -74,7 +74,7 @@ def train(
   data_path=data_dir,
   max_songs=10000,
   prob_sos=0.0,
-  max_corp_songs=float('inf'),
+  max_corp_songs=50000,
   model_path='music_gen.pt',
 ):
   # Calculate min and max input/target length
@@ -154,25 +154,25 @@ def stage_train(stages):
 
 if __name__ == '__main__':
   stages = [
+    # {
+    #   'loss_criteria': 2.5,
+    #   'save_freq': 5,
+    #   'forcing': 1.0,
+    #   'input_len': 32,
+    #   'target_len': 1,
+    #   'prob_sos': 0,
+    # },
+    # {
+    #   'loss_criteria': 1.7,
+    #   'save_freq': 4,
+    #   'forcing': 1.0,
+    #   'input_len': 50,
+    #   'target_len': 12,
+    #   'prob_sos': 0.01,
+    # },
     {
-      'loss_criteria': 2.5,
-      'save_freq': 10,
-      'forcing': 1.0,
-      'input_len': 32,
-      'target_len': 1,
-      'prob_sos': 0,
-    },
-    {
-      'loss_criteria': 1.6,
-      'save_freq': 10,
-      'forcing': 1.0,
-      'input_len': 50,
-      'target_len': 12,
-      'prob_sos': 0.01,
-    },
-    {
-      'loss_criteria': 1.1,
-      'save_freq': 2,
+      'loss_criteria': 0.0,
+      'save_freq': 1,
       'forcing': 1.0,
       'input_len': 100,
       'target_len': 50,
@@ -180,9 +180,9 @@ if __name__ == '__main__':
     },
     {
       'loss_criteria': 0.0,
-      'save_freq': 2,
-      'forcing': 1.0,
-      'input_len': (100, 500),
+      'save_freq': 1,
+      'forcing': 1,
+      'input_len': (100, 800),
       'target_len': 30,
       'prob_sos': 0.01,
       'batch_size':32,

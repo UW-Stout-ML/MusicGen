@@ -9,14 +9,6 @@ from train import *
 # torch.backends.cudnn.deterministic = True
 # torch.backends.cudnn.benchmark = False
 
-def ngram_to_sentence(song):
-  """Convert a sequence with ngrams to a sentence"""
-  _, idx2tok = get_dictionaries()
-  sentence = []
-  for ngram in song:
-    sentence += list(idx2tok[ngram.item()])
-  return sentence # Now a sentence
-
 def test_model(max_len=1500, temp=0.5, path='music_gen.pt'):
   device=torch.device("cuda" if torch.cuda.is_available() else "cpu")
   tok2idx, idx2tok = get_dictionaries()
@@ -39,20 +31,22 @@ def test_model(max_len=1500, temp=0.5, path='music_gen.pt'):
   #   # if is_done: break
 
   song = song[0] # Get first batch
-  for tok in song:
-    print(idx2tok[tok.item()], end= ' ')
-  
   fs = 100
-  sentence = ngram_to_sentence(song)
+  sentence = ngram_to_sentence(song, get_dictionaries())
+
+  print(sentence)
   
   directory_path = cwd / 'output_songs'
   file_count = len([entry for entry in os.listdir(directory_path) if os.path.isfile(os.path.join(directory_path, entry))])
-  file_path = directory_path / f"song_{str(file_count)}.mid"
+  file_path = os.path.join(directory_path, f"song_{str(file_count)}.mid")
 
   pretty_midi = sentence_to_pretty_midi(sentence, fs)
   
   show_pretty_midi(pretty_midi)
   
+  if not os.path.exists(directory_path):
+    os.makedirs(directory_path)
+
   pretty_midi.write(file_path)
 
 test_model()
