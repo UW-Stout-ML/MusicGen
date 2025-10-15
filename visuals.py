@@ -12,6 +12,11 @@ def show_pretty_midi(pretty_midi: pm.PrettyMIDI, aspect='equal'):
   piano_roll = pretty_midi.get_piano_roll(fs=100)
   show_midi(piano_roll, aspect=aspect)
 
+def compare_pretty_midi(pretty_midi_0: pm.PrettyMIDI, pretty_midi_1: pm.PrettyMIDI, start_sec=0, end_sec=None):
+  piano_roll_0 = pretty_midi_0.get_piano_roll(fs=100)
+  piano_roll_1 = pretty_midi_1.get_piano_roll(fs=100)
+  compare_midis(piano_roll_0, piano_roll_1, start_sec, end_sec)
+
 def compare_midis(piano_roll_0, piano_roll_1, start_sec=0, end_sec=None):
   if end_sec is None:
     end_sec = piano_roll_0.shape[1] / 100  # Assuming fs=100
