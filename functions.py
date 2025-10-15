@@ -405,16 +405,22 @@ def sentence_to_pretty_midi(sentence, fs=100):
   token_idx = 0
 
   def next_tok():
+    nonlocal token_idx
+    nonlocal sentence
     if token_idx >= len(sentence): return None
     token = sentence[token_idx]
     token_idx += 1
     return token
   
   def peek_tok():
+    nonlocal token_idx
+    nonlocal sentence
     if token_idx >= len(sentence): return None
     return sentence[token_idx]
   
   def is_end():
+    nonlocal token_idx
+    nonlocal sentence
     return token_idx >= len(sentence)
   
   def next_vel():
@@ -457,10 +463,10 @@ def sentence_to_pretty_midi(sentence, fs=100):
       # Create note
       note = pm.Note(velocity=vel, pitch=pitch, start=start_time, end=time)
       instruments[inst].notes.append(note)
-    elif note == '^' or note == '$':
+    elif tok == '^' or tok == '$':
       continue
     else:
-      print(f"Error: Unknown note {note}")
+      print(f"Error: Unknown token {note}")
       exit(4)
 
   for inst in instruments.values():

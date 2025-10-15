@@ -144,4 +144,10 @@ def get_dictionaries(data_folder='', max_vocab_size=10000, max_songs=float('inf'
         A dictionary that maps from a token str to an encoded number.
     idx2tok : dict
     """
-    return get_cleaned_corpus(data_folder, max_vocab_size, max_songs)[1:]
+    if all(os.path.exists(f) for f in ("token2idx.joblib", "idx2token.joblib")):
+        with open("token2idx.joblib", 'rb') as f:
+            token2idx = joblib.load(f)
+        with open("idx2token.joblib", 'rb') as f:
+            idx2token = {int(idx): token for idx, token in joblib.load(f).items()}
+        return token2idx, idx2token
+    return get_cleaned_corpus(data_folder, max_vocab_size, max_songs)

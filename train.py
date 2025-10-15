@@ -48,7 +48,7 @@ def load_model(
   
   try:
     print(f"Loading model file: {path}")
-    dic = torch.load(path, map_location=device, weights_only=True)
+    dic = torch.load(path, map_location=device, weights_only=False)
   except Exception as e: # No model file found
     print(e)
     print("Model not found, creating a new one...")
@@ -141,11 +141,12 @@ def train(
     avg_loss = total_loss / total_tok
 
     if (epoch + 1) % save_freq == 0:
-      print(f"Saving model... avg loss={avg_loss:0.4f}")
+      print(f"epoch={(epoch + 1):05d} avg loss={avg_loss:0.4f} saving model...")
       save_model(model, epoch, model_path)
+    else:
+      print(f"epoch={(epoch + 1):05d} avg loss={avg_loss:0.4f}")
 
     # Update stage
-    stage = stages[stage_idx]
     if avg_loss < loss_criteria:
       break # Next stage
 
@@ -157,24 +158,24 @@ def stage_train(stages):
 if __name__ == '__main__':
   stages = [
     {
-      'loss_criteria': 1.8,
-      'save_freq': 5,
+      'loss_criteria': 1.9,
+      'save_freq': 40,
       'forcing': 1.0,
       'input_len': 32,
       'target_len': 1,
       'prob_sos': 0,
     },
     {
-      'loss_criteria': 1.2,
-      'save_freq': 4,
+      'loss_criteria': 1.7,
+      'save_freq': 30,
       'forcing': 1.0,
       'input_len': 50,
       'target_len': 12,
       'prob_sos': 0.01,
     },
     {
-      'loss_criteria': 0.4,
-      'save_freq': 1,
+      'loss_criteria': 1.1,
+      'save_freq': 10,
       'forcing': 1.0,
       'input_len': 100,
       'target_len': 50,
@@ -182,7 +183,7 @@ if __name__ == '__main__':
     },
     {
       'loss_criteria': 0.0,
-      'save_freq': 1,
+      'save_freq': 5,
       'forcing': 1,
       'input_len': (100, 800),
       'target_len': 30,
