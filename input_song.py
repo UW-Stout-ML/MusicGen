@@ -1,7 +1,7 @@
 from train import *
 
 
-def test_model(max_len=500, temp=0.9, path='music_gen.pt'):
+def test_model(max_len=1500, temp=0.9, path='music_gen.pt'):
   device=torch.device("cuda" if torch.cuda.is_available() else "cpu")
   corpus, tok2idx, idx2tok = get_cleaned_corpus('', 10000)
   dicts = (tok2idx, idx2tok)
@@ -13,7 +13,7 @@ def test_model(max_len=500, temp=0.9, path='music_gen.pt'):
   corpus_song = corpus[corpus_idx]
   corpus_sentence = ngram_to_sentence(corpus_song, dicts)
 
-  prefix_length = 50
+  prefix_length = 200
   song = torch.tensor(corpus_song[:prefix_length])[None, :] # First 20 events
 
   with torch.no_grad():
