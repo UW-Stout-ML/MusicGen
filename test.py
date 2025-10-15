@@ -1,7 +1,7 @@
 from train import *
 
 
-def test_model(max_len=1500, temp=0.5, path='music_gen.pt'):
+def test_model(max_len=1000, temp=0.9, path='music_gen.pt'):
   device=torch.device("cuda" if torch.cuda.is_available() else "cpu")
   tok2idx, idx2tok = get_dictionaries()
   sos_tok = tok2idx[('^',)]

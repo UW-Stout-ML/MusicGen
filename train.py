@@ -3,7 +3,7 @@ from data_loader import *
 from pathlib import Path
 
 cwd = Path(__file__).parent
-data_dir = cwd / 'POP909'
+data_dir = cwd / 'one_note_songs'
 
 def save_model(model: MusicGen, epochs, path='music_gen.pt'):
   """Save the MusicGen model
@@ -154,24 +154,24 @@ def stage_train(stages):
 
 if __name__ == '__main__':
   stages = [
-    # {
-    #   'loss_criteria': 2.5,
-    #   'save_freq': 5,
-    #   'forcing': 1.0,
-    #   'input_len': 32,
-    #   'target_len': 1,
-    #   'prob_sos': 0,
-    # },
-    # {
-    #   'loss_criteria': 1.7,
-    #   'save_freq': 4,
-    #   'forcing': 1.0,
-    #   'input_len': 50,
-    #   'target_len': 12,
-    #   'prob_sos': 0.01,
-    # },
     {
-      'loss_criteria': 0.0,
+      'loss_criteria': 2.5,
+      'save_freq': 5,
+      'forcing': 1.0,
+      'input_len': 32,
+      'target_len': 1,
+      'prob_sos': 0,
+    },
+    {
+      'loss_criteria': 1.7,
+      'save_freq': 4,
+      'forcing': 1.0,
+      'input_len': 50,
+      'target_len': 12,
+      'prob_sos': 0.01,
+    },
+    {
+      'loss_criteria': 0.4,
       'save_freq': 1,
       'forcing': 1.0,
       'input_len': 100,

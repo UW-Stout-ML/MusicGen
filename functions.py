@@ -324,7 +324,7 @@ def combined_instrument_events(pretty_midi: pm.PrettyMIDI, fs=100):
   
   return sorted(events, key=lambda x: x[1]) # Sort by time
 
-def pretty_midi_to_sentence(pretty_midi: pm.PrettyMIDI, fs=100, combine_instruments=True) -> list[str]:
+def pretty_midi_to_sentence(pretty_midi: pm.PrettyMIDI, fs=100, combine_instruments=False) -> list[str]:
   """Skipping the piano roll step because we are using multiple instruments now.
   
   Parameters
@@ -514,7 +514,6 @@ def get_data(input_dir, max_songs=float('inf'), fs=100):
   
   for file_path in tqdm(midi_file_paths, desc=f"Creating {len(midi_file_paths)} sentences"):
     try:
-      print(file_path)
       pretty_midi = pm.PrettyMIDI(file_path)
     except Exception as e:
       print(e)
