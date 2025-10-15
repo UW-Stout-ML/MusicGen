@@ -3,7 +3,7 @@ from data_loader import *
 from pathlib import Path
 
 cwd = Path(__file__).parent
-data_dir = cwd / 'POP902_cleaned'
+data_dir = cwd / 'POP9092_cleaned'
 
 def save_model(model: MusicGen, epochs, path='music_gen.pt'):
   """Save the MusicGen model
