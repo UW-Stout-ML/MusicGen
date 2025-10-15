@@ -113,7 +113,7 @@ def process_corpus(songs_list, max_vocab_size, min_song_len):
     return tokens, token2idx, idx2token
 
 
-def get_cleaned_corpus(data_folder, max_vocab_size, max_songs=float('inf'), min_song_len=1) -> tuple[list[list[int]],dict,dict]:
+def get_cleaned_corpus(data_folder, max_vocab_size=10000, max_songs=float('inf'), min_song_len=1) -> tuple[list[list[int]],dict,dict]:
     """
     Load processed corpus from disk if available, otherwise generate it.
     """

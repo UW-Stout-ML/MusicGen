@@ -3,7 +3,7 @@ from data_loader import *
 from pathlib import Path
 
 cwd = Path(__file__).parent
-data_dir = cwd / 'POP9092_cleaned'
+data_dir = cwd / 'POP9092'
 
 def save_model(model: MusicGen, epochs, path='music_gen.pt'):
   """Save the MusicGen model
@@ -48,7 +48,7 @@ def load_model(
   
   try:
     print(f"Loading model file: {path}")
-    dic = torch.load(path, map_location=device)
+    dic = torch.load(path, map_location=device, weights_only=True)
   except Exception as e: # No model file found
     print(e)
     print("Model not found, creating a new one...")
@@ -77,6 +77,8 @@ def train(
   max_corp_songs=50000,
   model_path='music_gen.pt',
 ):
+  print(f"Using device: {torch.device('cuda' if torch.cuda.is_available() else 'cpu')}")
+
   # Calculate min and max input/target length
   min_input_len = input_len if isinstance(input_len, (int, float)) else list(input_len)[0]
   max_input_len = input_len if isinstance(input_len, (int, float)) else list(input_len)[-1]
@@ -112,7 +114,7 @@ def train(
   loss_fn = nn.CrossEntropyLoss()
   optim = torch.optim.Adam(model.parameters(), lr=lr)
 
-  for epoch in tqdm(range(epoch, epochs), 'Training...'):
+  for epoch in range(epoch, epochs):
     total_loss = 0
     total_tok = 0
     
@@ -155,7 +157,7 @@ def stage_train(stages):
 if __name__ == '__main__':
   stages = [
     {
-      'loss_criteria': 2.5,
+      'loss_criteria': 1.8,
       'save_freq': 5,
       'forcing': 1.0,
       'input_len': 32,
@@ -163,7 +165,7 @@ if __name__ == '__main__':
       'prob_sos': 0,
     },
     {
-      'loss_criteria': 1.7,
+      'loss_criteria': 1.2,
       'save_freq': 4,
       'forcing': 1.0,
       'input_len': 50,

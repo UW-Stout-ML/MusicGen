@@ -2,31 +2,11 @@ import pretty_midi as pm
 import os
 from tqdm import tqdm
 
-program_map = {
-  'grandeur 1': 1,
-  '': 1,
-  'melody': 0,
-  'bridge': 1,
-  'gggg': 1,
-  'hoa âm': 1,
-  'piano4': 1,
-  'midi 04': 1,
-  'copy of halion sonic se 01': 1,
-  'piano': 1,
-  'piano`': 1,
-  'lót': 1,
-  'meldoy': 0,
-  'grandeur 2': 1,
-  'halion sonic se 01': 1,
-  'steinway grand piano': 1,
-  'dem': 1,
-  'melopy': 0,
-  'cau': 1,
-  'pianio': 1,
-  'cau chen': 1,
-  'instrument track 01': 1,
-  'track 4': 1
-}
+melodies_inst_names = (
+  'melody',
+  'meldoy',
+  'melopy',
+)
 
 def get_midis(input_dir):
   valid_file_paths = []
@@ -41,16 +21,25 @@ def clean_pretty_midi(pretty_midi: pm.PrettyMIDI):
   max_vel = 127
   top_vel = 0
   min_time = float('inf')
-  # pretty_midi.instruments = list(filter(lambda x: x.name in ('MELODY'), pretty_midi.instruments))
+  
+  # Remove drums
+  for instrument in pretty_midi.instruments:
+    if instrument.is_drum:
+      pretty_midi.instruments.remove(instrument)
+
+  # Find max velocity and start of first note
   for instrument in pretty_midi.instruments:
     for note in instrument.notes:
       top_vel = max(top_vel, note.velocity)
       min_time = min(min_time, note.start)
-  for idx, instrument in enumerate(pretty_midi.instruments):
-    # instrument.program = idx
+
+  # Normalize velocities and remove silence at the beginning
+  for instrument in pretty_midi.instruments:
     for note in instrument.notes:
       note.velocity = int(note.velocity / max_vel * max_vel)
       note.start -= min_time
+      note.end -= min_time
+  
   return pretty_midi
 
 input_dir = 'POP9092'
@@ -60,27 +49,20 @@ midis = get_midis(input_dir)
 if not os.path.exists(output_dir):
   os.mkdir(output_dir)
 
-# Sanity check
-cnt = 0
-inst_names = set()
+removed_cnt = 0
 for idx, midi in enumerate(tqdm(midis, 'Cleaning midis')):
+  file_name = midi.split('\\')[-1].split('.')[0]
   pretty_midi = pm.PrettyMIDI(midi)
   if len(pretty_midi.instruments) == 0:
-    cnt += 1
+    removed_cnt += 1
     continue
-  for inst in pretty_midi.instruments:
-    inst_name = inst.name.lower().strip()
-    inst_names.add(inst_name)
-    if inst_name not in program_map:
-      inst.program = 1
-    else:
-      inst.program = program_map[inst_name]
   if pretty_midi.instruments[0].name.lower().strip() != 'melody':
-    cnt += 1
+    removed_cnt += 1
     continue
+  for idx, inst in enumerate(pretty_midi.instruments):
+    inst.program = idx
   pretty_midi = clean_pretty_midi(pretty_midi)
-  pretty_midi.write(f"{output_dir}\\song_{idx}.mid")
-  # if idx > 10: break
-print(f"{cnt} misalignments")
-print('instruments:', inst_names)
+  pretty_midi.write(f"{output_dir}\\{file_name}.mid")
+
+print(f"{removed_cnt} songs removed")
 

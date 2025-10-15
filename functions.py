@@ -43,19 +43,13 @@ def clean_all_midis(input_dir):
     except:
       print(f"Failed to load midi {idx}")
 
-def validate_midi_file_path(file_path, warn=False):
-  root, ext = os.path.splitext(file_path)
-  if ext.lower() != '.mid':
-    if warn: print(f"File {file_path} is invalid!")
-  return True
-
 def get_valid_midi_file_paths(input_dir, max_songs=float('inf')):
   valid_file_paths = []
 
   for root, _, files in os.walk(input_dir):
     for file in files:
       if len(valid_file_paths) >= max_songs: break
-      if not validate_midi_file_path(file): continue
+      if not file.endswith('.mid'): continue
       full_file_path = os.path.join(root, file)
       valid_file_paths.append(full_file_path)
   
@@ -313,14 +307,14 @@ def combined_instrument_events(pretty_midi: pm.PrettyMIDI, fs=100):
   # Concat all the notes from all the instruments into one list
   events = [] # (instrument, time, pitch, velocity, is_on)
 
-  for inst in pretty_midi.instruments:
+  for inst_idx, inst in enumerate(pretty_midi.instruments):
     if inst.is_drum: continue
     for note in inst.notes:
       if note.pitch > 127 or note.pitch < 0: continue
       start_time = int(note.start * fs)
       end_time = int(note.end * fs)
-      events.append((inst.program, start_time, note.pitch, note.velocity, True))
-      events.append((inst.program, end_time, note.pitch, note.velocity, False))
+      events.append((inst_idx, start_time, note.pitch, note.velocity, True))
+      events.append((inst_idx, end_time, note.pitch, note.velocity, False))
   
   return sorted(events, key=lambda x: x[1]) # Sort by time
 
@@ -366,9 +360,6 @@ def pretty_midi_to_sentence(pretty_midi: pm.PrettyMIDI, fs=100, combine_instrume
     note_idx += 1
     vel = quantize_velocity(vel)
 
-    if combine_instruments:
-      inst = get_instrument_group(inst)
-
     while time > last_time:
       diff = min(time - last_time, fs)
       last_time += diff
@@ -376,17 +367,17 @@ def pretty_midi_to_sentence(pretty_midi: pm.PrettyMIDI, fs=100, combine_instrume
         sentence += [f"t{diff}"]
 
     if is_on and (pitch, inst) not in active_notes:
-      # sentence += [f"p{inst}"]
-      # sentence += [f"v{vel}"]
-      # sentence += [f"+{pitch}"]
+      sentence += [f"+{pitch}"]
       sentence += [f"v{vel}"]
-      sentence += [f"+{pitch}p{inst}"]
+      sentence += [f"i{inst}"]
+      # sentence += [f"v{vel}"]
+      # sentence += [f"+{pitch}p{inst}"]
       active_notes.add((pitch, inst))
       note_played = True
     elif not is_on and (pitch, inst) in active_notes:
-      # sentence += [f"p{inst}"]
-      # sentence += [f"-{pitch}"]
-      sentence += [f"-{pitch}p{inst}"]
+      sentence += [f"-{pitch}"]
+      sentence += [f"i{inst}"]
+      # sentence += [f"-{pitch}p{inst}"]
       active_notes.remove((pitch, inst))
   
   return sentence
@@ -411,34 +402,59 @@ def sentence_to_pretty_midi(sentence, fs=100):
   vel = 100
   inst = 0
   time = 0
+  token_idx = 0
 
-  for idx, note in enumerate(sentence):
-    if note[0] == 't': # Time step
-      step = int(note[1:]) / fs
+  def next_tok():
+    if token_idx >= len(sentence): return None
+    token = sentence[token_idx]
+    token_idx += 1
+    return token
+  
+  def peek_tok():
+    if token_idx >= len(sentence): return None
+    return sentence[token_idx]
+  
+  def is_end():
+    return token_idx >= len(sentence)
+  
+  def next_vel():
+    if not is_end() and peek_tok()[0] == 'v':
+      return int(next_tok()[1:])
+    return vel
+  
+  def next_inst():
+    if not is_end() and peek_tok()[0] == 'i':
+      return int(next_tok()[1:])
+    return inst
+  
+  while not is_end():
+    tok = next_tok()
+
+    if tok[0] == 't': # Time step
+      step = int(tok[1:]) / fs
       time += step
-    elif note[0] == 'v': # Update velocity
-      vel = int(note[1:])
-    # elif note[0] == 'p': # Update instrument
-    #   inst = int(note[1:])
-    elif note[0] == '+': # Note on
-      idx = note.index('p')
-      pitch = int(note[1:idx])
-      inst = int(note[idx+1:])
+    elif tok[0] == 'v': # Velocity
+      vel = int(tok[1:])
+    elif tok[0] == 'i': # Instrument
+      inst = int(tok[1:])
+    elif tok[0] == '+': # Note on
+      pitch = int(tok[1:])
+      vel = next_vel()
+      inst = next_inst()
+      if (pitch, inst) in active_notes: continue
       active_notes[(pitch, inst)] = (time, vel)
-    elif note[0] == '-': # Note off
-      idx = note.index('p')
-      pitch = int(note[1:idx])
-      inst = int(note[idx+1:])
-      
-      if (pitch, inst) not in active_notes:
-        continue
-      
+    elif tok[0] == '-': # Note off
+      pitch = int(tok[1:])
+      inst = next_inst()
+      if (pitch, inst) not in active_notes: continue
       start_time, vel = active_notes.pop((pitch, inst))
       
       # Create instrument if not created
       if inst not in instruments:
         instruments[inst] = pm.Instrument(program=inst)
+        pretty_midi.instruments.append(instruments[inst])
       
+      # Create note
       note = pm.Note(velocity=vel, pitch=pitch, start=start_time, end=time)
       instruments[inst].notes.append(note)
     elif note == '^' or note == '$':

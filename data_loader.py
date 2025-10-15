@@ -65,6 +65,8 @@ class Corpus(Dataset):
     if max_songs is not None:
       self.corpus = self.corpus[:max_songs]
 
+    print(f"Corpus size: {len(self.corpus)}")
+
   def __len__(self):
     return len(self.corpus)
 
