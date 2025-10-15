@@ -365,7 +365,6 @@ def pretty_midi_to_sentence(pretty_midi: pm.PrettyMIDI, fs=100, combine_instrume
     inst, time, pitch, vel, is_on = events[note_idx]
     note_idx += 1
     vel = quantize_velocity(vel)
-    
 
     if combine_instruments:
       inst = get_instrument_group(inst)
