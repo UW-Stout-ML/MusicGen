@@ -174,7 +174,7 @@ if __name__ == '__main__':
       'prob_sos': 0.01,
     },
     {
-      'loss_criteria': 0.7,
+      'loss_criteria': 0.9,
       'save_freq': 10,
       'forcing': 1.0,
       'input_len': 100,
