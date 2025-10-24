@@ -7,7 +7,11 @@ This project uses a Recurrent Neural Network with Gated Recurrent Units and an a
 ## Attention
 
 ## Dataset and resutls
-Initially we trained our model on the [MAESTRO dataset](https://arxiv.org/abs/1810.12247), which eventually resulted in satasfactory results when generating completely from scratch. To explore different music generas we also trained our model on trained on the [Pop909 dataset](https://github.com/music-x-lab/POP909-Dataset). This pop909 model is the music_gen.pt final model uploaded to this 
+Initially we trained our model on the [MAESTRO dataset](https://arxiv.org/abs/1810.12247), which eventually resulted in satasfactory results when generating completely from scratch. To explore different music generas we also trained our model on trained on the [Pop909 dataset](https://github.com/music-x-lab/POP909-Dataset). This pop909 model is the music_gen.pt final model uploaded. 
+- [MAESTRO results](music_gen_results\maestro_res_1.wav)
+<img src="music_gen\maestro_vis.png" alt="MAESTRO Visualization" width="500">
+- [POP909 results](music_gen_results\pop909_res_1.mp3)
+<img src="music_gen\pop909_vis.png" alt="POP909 Visualization" width="500">
 
 ### Pop909 Citation
 @inproceedings{pop909-ismir2020,
