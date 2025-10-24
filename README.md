@@ -15,7 +15,8 @@ To explore different music generas we also trained our model on trained on the [
 - [POP909 results](music_gen_results\pop909_res_1.mp3)
   
 To see if our model was generating songs from then dataset we fed in tokens of the begining of one of the songs in the dataset and compaired the output to the original song. It was able to create a non copied extention of the song.
-
+- [POP909 test](music_gen_results\pop909_sample.mp3)
+<img src="music_gen_results\pop909_comparison.png" alt="MAESTRO Visualization" width="500">
 
 ### Pop909 Citation
 @inproceedings{pop909-ismir2020,
