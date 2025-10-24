@@ -8,14 +8,14 @@ A model which takes in
 
 ## Dataset and resutls
 Initially we trained our model on the [MAESTRO dataset](https://arxiv.org/abs/1810.12247), which eventually resulted in satasfactory results when generating completely from scratch. This is an example output using the MAESTRO dataset.
-- [MAESTRO results](music_gen_results\maestro_res_1.wav)
+- [MAESTRO results](https://github.com/UW-Stout-ML/MusicGen/tree/main/music_gen_results/maestro_res_1.wav)
 <img src="music_gen_results\maestro_vis.png" alt="MAESTRO Visualization" width="500">
 
 To explore different music generas we also trained our model on trained on the [Pop909 dataset](https://github.com/music-x-lab/POP909-Dataset). This POP09 model is the music_gen.pt final model uploaded. Here is an example from our final model trained on the POP909 dataset.
-- [POP909 results](music_gen_results\pop909_res_1.mp3)
+- [POP909 results](https://github.com/UW-Stout-ML/MusicGen/tree/main/music_gen_results/pop909_res_1.mp3)
   
 To see if our model was generating songs from then dataset we fed in tokens of the begining of one of the songs in the dataset and compaired the output to the original song. It was able to create a non copied extention of the song. The top graph shows the note sequences for the seeded song, while the bottom shows the results from the models generation with the seeded segment.
-- [POP909 test](music_gen_results\pop909_sample.mp3)
+- [POP909 test](https://github.com/UW-Stout-ML/MusicGen/tree/main/music_gen_results/pop909_sample.mp3)
 <img src="music_gen_results\pop909_comparison.png" alt="MAESTRO Visualization" width="500">
 
 ### Pop909 Citation
