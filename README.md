@@ -3,11 +3,22 @@ This project uses a Recurrent Neural Network with Gated Recurrent Units and an a
  - Made by Emmett Jaakkola, Kyler Nikolai and Matthew Peplinski
 
 ## What is a RNN.
-A model which takes in
-## Attention
+An [RNN](https://en.wikipedia.org/wiki/Recurrent_neural_network) is a machine learning architecture that accepts an arbitrary sized input. We used a 3 layer [GRU](https://en.wikipedia.org/wiki/Gated_recurrent_unit). We then applied attention to the final output. The goal of attention is to focus on previous outputs to give more context as to what the next output should be. Attention does this by calculating a separate context vector that weights outputs that are more relavent higher than outputs that are less relavent.
 
-## Dataset and resutls
-Initially we trained our model on the [MAESTRO dataset](https://arxiv.org/abs/1810.12247), which eventually resulted in satasfactory results when generating completely from scratch. This is an example output using the MAESTRO dataset.
+## Staging
+During the training process, we found it helpful to train the model with different parameters over time. At the beginning of the training process, we had short sequences so that the model could quickly learn the basic rules of music. As the model became more accurate we made the sequences longer and gave the model more context. When the loss dips below the loss threshold, we transition to the next stage.
+
+<img src="assets/stages.png">
+
+## Model Parameters
+```
+input_size   32
+hidden_size  1028
+num_layers   3
+```
+
+## Dataset and results
+Initially, we trained our model on the [MAESTRO dataset](https://arxiv.org/abs/1810.12247), which resulted in satasfactory results when generating music completely from scratch. This is an example output using the MAESTRO dataset.
 - [MAESTRO results](https://github.com/UW-Stout-ML/MusicGen/tree/main/music_gen_results/maestro_res_1.wav)
 <img src="music_gen_results\maestro_vis.png" alt="MAESTRO Visualization" width="500">
 
