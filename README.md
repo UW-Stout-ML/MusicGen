@@ -19,7 +19,7 @@ num_layers   3
 
 ## Dataset and results
 Initially, we trained our model on the [MAESTRO dataset](https://arxiv.org/abs/1810.12247), which resulted in satasfactory results when generating music completely from scratch. This is an example output using the MAESTRO dataset.
-- [MAESTRO results](https://github.com/UW-Stout-ML/MusicGen/tree/main/music_gen_results/maestro_res_1.wav)
+- [MAESTRO results](https://github.com/UW-Stout-ML/MusicGen/tree/main/music_gen_results/maestro_res_1.mp3)
 <img src="music_gen_results\maestro_vis.png" alt="MAESTRO Visualization" width="500">
 
 To explore different music generas we also trained our model on trained on the [Pop909 dataset](https://github.com/music-x-lab/POP909-Dataset). This POP09 model is the music_gen.pt final model uploaded. Here is an example from our final model trained on the POP909 dataset.
